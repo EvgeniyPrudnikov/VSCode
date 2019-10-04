@@ -1,4 +1,4 @@
-export function lol (name: string) {
+export function connect_to_db (name: string) {
 	var msg = 'hello' + name;
 	return msg
 }

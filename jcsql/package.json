@@ -10,22 +10,27 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:extension.helloWorld"
+		"*"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"keybindings": [
 			{
-				"command": "extension.helloWorld",
-				"key": "ctrl+enter",
-				"args": "LOL"
+				"command": "extension.runCode",
+				"key": "ctrl+enter"
 			}
 		],
 		"commands": [
 			{
-				"command": "extension.helloWorld",
-				"title": "Hello World",
-				"category": "Hello"
+				"command": "extension.runCode",
+				"title": "Run Code",
+				"category": "JCSQL"
+			},
+			{
+				"command": "extention.quickInput",
+				"title": "quickInput",
+				"category": "JCSQL"
+
 			}
 		]
 	},
