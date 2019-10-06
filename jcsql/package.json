@@ -16,13 +16,13 @@
 	"contributes": {
 		"keybindings": [
 			{
-				"command": "extension.runCode",
+				"command": "extension.addConnection",
 				"key": "ctrl+enter"
 			}
 		],
 		"commands": [
 			{
-				"command": "extension.runCode",
+				"command": "extension.addConnection",
 				"title": "Run Code",
 				"category": "JCSQL"
 			},
