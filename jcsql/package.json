@@ -10,27 +10,27 @@
 		"Other"
 	],
 	"activationEvents": [
-		"*"
+		"onCommand:extension.addConnection",
+		"onCommand:extension.showConnections",
+		"onCommand:extension.runCode"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
-		"keybindings": [
-			{
-				"command": "extension.addConnection",
-				"key": "ctrl+enter"
-			}
-		],
 		"commands": [
 			{
 				"command": "extension.addConnection",
-				"title": "Run Code",
+				"title": "Add Connection",
 				"category": "JCSQL"
 			},
 			{
-				"command": "extention.quickInput",
-				"title": "quickInput",
+				"command": "extention.showConnections",
+				"title": "Show Connections",
 				"category": "JCSQL"
-
+			},
+			{
+				"command": "extension.runCode",
+				"title": "Run Code",
+				"category": "JCSQL"
 			}
 		]
 	},

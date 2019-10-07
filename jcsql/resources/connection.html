@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src vscode-resource:; script-src 'nonce-${nonce}';style-src vscode-resource: 'unsafe-inline';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src vscode-resource:; script-src 'nonce-${nonce}';style-src vscode-resource:;">
     <link rel="stylesheet" type="text/css" href="${styleUri}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
@@ -32,7 +32,7 @@
             <label for="cstr"><b>Connection string</b></label>
             <input id="connString" type="text" placeholder="Past Connection string" name="psw" required>
 
-            <button id="btn" type="submit" onclick="c();">Save</button>
+            <button id="btn" type="submit">Save</button>
         </div>
     </form>
 </body>
