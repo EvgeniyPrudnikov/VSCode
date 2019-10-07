@@ -24,8 +24,8 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand('extension.runCode', async () => {
 			// The code you place here will be executed every time your command is executed
-			const enviroments:Array<string> = connStore.getAllConnectionNames()
-			const value = await vscode.window.showQuickPick(enviroments, { placeHolder: 'Select the environment to run code' });
+			// const enviroments:Array<string> = connStore.getAllConnectionNames()
+			const value = await vscode.window.showQuickPick(connStore.getAllConnectionNames(), { placeHolder: 'Select the environment to run code' });
 
 			// Display a message box to the user
 			vscode.window.showInformationMessage(`Hello ${value}!`);
@@ -35,4 +35,5 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 // this method is called when your extension is deactivated
-export function deactivate() { }
+export function deactivate() {
+}

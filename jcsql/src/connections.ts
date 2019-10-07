@@ -23,10 +23,7 @@ class ConnValue {
 	}
 }
 
-
-
 class Connection {
-
 
 	private _connFile = 'connection.html'
 	private _connJSFiles = 'main.js'
@@ -44,7 +41,6 @@ class Connection {
 
 	constructor(extensionPath: string) {
 
-
 		const column = vscode.window.activeTextEditor
 			? vscode.window.activeTextEditor.viewColumn
 			: undefined;
@@ -59,7 +55,7 @@ class Connection {
 				// And restrict the webview to only loading content from our extension's `resources` directory.
 				localResourceRoots: [vscode.Uri.file(path.join(extensionPath, 'resources'))]
 			}
-		);;
+		);
 
 		this._panel.title = 'Connection';
 		this._extensionPath = extensionPath;
@@ -76,9 +72,11 @@ class Connection {
 			message => {
 				switch (message.command) {
 					case 'send':
-						let conval:ConnValue = this._fillProps(message.text)
+						let conval: ConnValue = this._fillProps(message.text)
 						vscode.window.showInformationMessage('Saved')
 						this.isReady.emit(conval)
+						this.sleep(500)
+						this.dispose()
 						return;
 				}
 			},
@@ -96,6 +94,11 @@ class Connection {
 				x.dispose();
 			}
 		}
+	}
+
+	private sleep(delay: number) {
+		var start = new Date().getTime();
+		while (new Date().getTime() < start + delay);
 	}
 
 	private _update() {
@@ -134,28 +137,23 @@ class Connection {
 export default class ConnectionStore {
 
 	private _extensionPath: string = ''
-	private _passFileName = 'pass'
+	private _passFileName: string = 'pass'
+	private _pathFile: string = ''
 	private static instance: ConnectionStore;
-	private _connectionStore: Map<string, ConnValue> = new Map<string, ConnValue>()
+	private _connectionStore: Map<string, ConnValue>;
 
 	private constructor(extensionPath: string) {
 		this._extensionPath = extensionPath
 
 		// check is pass file exists
-		let pathFile = path.join(this._extensionPath, this._passFileName)
+		this._pathFile = path.join(this._extensionPath, this._passFileName)
 
-		if (fs.existsSync(pathFile)) {
-			this.loadConnections(pathFile)
+		if (fs.existsSync(this._pathFile)) {
+			this._connectionStore = this.loadConnections(this._pathFile)
 		} else {
 			this._connectionStore = new Map<string, ConnValue>()
-			fs.writeFile(pathFile, 'test', { flag: 'wx' }, (err) => {
-				if (err) {
-					console.log(err)
-				}
-			})
 		}
 	}
-
 
 	static getInstance(extensionPath: string): ConnectionStore {
 		if (!ConnectionStore.instance) {
@@ -165,21 +163,27 @@ export default class ConnectionStore {
 		return ConnectionStore.instance;
 	}
 
-	private loadConnections(connStoreUri: string) {
-
+	private loadConnections(pathFile: string) {
+		let data = fs.readFileSync(pathFile)
+		if (data.toString()) {
+			return new Map<string, ConnValue>(JSON.parse(data.toString()));
+		}
+		return new Map<string, ConnValue>();
 	}
 
-	private flushConnections(connStoreUri: string) {
-
+	private flushConnections() {
+		console.log(this._pathFile)
+		fs.writeFileSync(this._pathFile, JSON.stringify(Array.from(this._connectionStore.entries())), { flag: 'w' })
 	}
 
 	addConnection() {
-		var con = new Connection(this._extensionPath)
+		let con = new Connection(this._extensionPath)
 		con.isReady.on((conval) => {
 			try {
 				console.log(conval.connName);
 				if (conval.connName) {
 					this._connectionStore.set(conval.connName, conval)
+					this.flushConnections()
 				}
 			} catch (error) {
 				console.log(error);
@@ -194,6 +198,4 @@ export default class ConnectionStore {
 	getAllConnectionNames(): Array<string> {
 		return Array.from(this._connectionStore.keys());
 	}
-
-
 }
