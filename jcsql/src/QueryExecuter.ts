@@ -11,13 +11,18 @@ class Execution {
         this._conn = connection
     }
 
-    private async connecToDB(connection: ConnValue) {
-        let connStr = 'DSN='
-        let conn = await odbc.connect('DSN=')
+    public queryResult: any | undefined
+
+    private async connecToDB() {
+        let connStr = 'DSN=impala_odbc'
+        return await odbc.connect(connStr)
     }
 
-    public execQuery() {
-        return JSON.parse('[    [        "asd",        {            "connName": "asd",            "connString": "asd",            "connEnv": "impala",            "connUser": "asd",            "connPass": "asd"        }    ],    [        "asd",        {            "connName": "asd",            "connString": "asd",            "connEnv": "impala",            "connUser": "asd",            "connPass": "asd"        }    ]]')
+    public async execQuery() {
+        let conn = await this.connecToDB()
+        let result = await conn.query("select 1 as value , 'asd' as lol union all select 3 as value , 'dsa' as lol ");
+        console.log(result)
+        this.queryResult = result
     }
 
 }
@@ -48,7 +53,10 @@ export default class QueryExecuter {
     public async RunQuery() {
 
         let queryToExecite = this._processQueryText()
-        // let quryResult = this._exec.execQuery()
+        await this._exec.execQuery()
+        let quryResult = this._exec.queryResult
+
+
 
         let doc = await vscode.workspace.openTextDocument()
         const workbenchConfig = vscode.workspace.getConfiguration('openSideBySideDirection')
@@ -56,7 +64,6 @@ export default class QueryExecuter {
 
         let show = await vscode.window.showTextDocument(doc, 2, false)
         // workbench.editor.openSideBySideDirection: right | down
-        await show.edit((edit) => edit.insert(new vscode.Position(0, 0), queryToExecite))
-
+        await show.edit((edit) => edit.insert(new vscode.Position(0, 0), quryResult))
     }
 }
