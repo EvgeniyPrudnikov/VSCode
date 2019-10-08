@@ -19,10 +19,10 @@ class Execution {
     }
 
     public async execQuery() {
-        let conn = await this.connecToDB()
-        let result = await conn.query("select 1 as value , 'asd' as lol union all select 3 as value , 'dsa' as lol ");
-        console.log(result)
-        this.queryResult = result
+        // let conn = await this.connecToDB()
+        // let result = await conn.query("select 1 as value , 'asd' as lol union all select 3 as value , 'dsa' as lol ");
+        // console.log(result)
+        this.queryResult = '[1]'
     }
 
 }
@@ -57,13 +57,20 @@ export default class QueryExecuter {
         let quryResult = this._exec.queryResult
 
 
+        let workbenchConfig = vscode.workspace.getConfiguration('workbench.editor')
+        let openSideBySideDirectionOld = workbenchConfig.get('openSideBySideDirection')
+
+        if (openSideBySideDirectionOld != 'down') {
+            await workbenchConfig.update('openSideBySideDirection', 'down', vscode.ConfigurationTarget.Global)
+        }
 
         let doc = await vscode.workspace.openTextDocument()
-        const workbenchConfig = vscode.workspace.getConfiguration('openSideBySideDirection')
-        workbenchConfig.update('openSideBySideDirection', 'down')
+        let show = await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two, false)
 
-        let show = await vscode.window.showTextDocument(doc, 2, false)
-        // workbench.editor.openSideBySideDirection: right | down
         await show.edit((edit) => edit.insert(new vscode.Position(0, 0), quryResult))
+
+        if (openSideBySideDirectionOld != 'down') {
+            await workbenchConfig.update('openSideBySideDirection', openSideBySideDirectionOld, vscode.ConfigurationTarget.Global)
+        }
     }
 }
