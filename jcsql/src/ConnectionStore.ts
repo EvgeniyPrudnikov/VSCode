@@ -1,42 +1,44 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-
 import * as vscode from 'vscode';
-import * as fs from 'fs'
+import * as fs from 'fs';
 import * as path from 'path';
 import { TypedEvent } from './TypedEvent';
 
 export class ConnValue {
 
-    connName: string = ''
-    connString: string = ''
-    connEnv: string = ''
-    connUser: string = ''
-    connPass: string = ''
+    connName: string;
+    connString: string;
+    connEnv: string;
+    connUser: string;
+    connPass: string;
 
     constructor(connName: string, connEnv: string, connUser: string, connPass: string, connString: string) {
-        this.connName = connName
-        this.connEnv = connEnv
-        this.connUser = connUser
-        this.connPass = connPass
-        this.connString = connString
+        this.connName = connName;
+        this.connEnv = connEnv;
+        this.connUser = connUser;
+        this.connPass = connPass;
+        this.connString = connString;
     }
+
+    private parseConnStr(connstr:string) {
+
+    }
+
 }
 
 class Connection {
 
-    private _connFile = 'connection.html'
-    private _connJSFiles = 'main.js'
-    private _style = 'style.css'
-    private _resource = 'resources'
+    private connFile = 'connection.html';
+    private connJSFiles = 'main.js';
+    private style = 'style.css';
+    private resource = 'resources';
 
     isReady = new TypedEvent<ConnValue>();
 
     public static readonly viewType = 'Connection';
 
-    private readonly _panel: vscode.WebviewPanel;
-    private readonly _extensionPath: string;
-    private _disposables: vscode.Disposable[] = [];
+    private readonly panel: vscode.WebviewPanel;
+    private readonly extensionPath: string;
+    private disposables: vscode.Disposable[] = [];
 
 
     constructor(extensionPath: string) {
@@ -45,7 +47,7 @@ class Connection {
             ? vscode.window.activeTextEditor.viewColumn
             : undefined;
 
-        this._panel = vscode.window.createWebviewPanel(
+        this.panel = vscode.window.createWebviewPanel(
             Connection.viewType,
             Connection.viewType,
             column || vscode.ViewColumn.Two,
@@ -57,39 +59,39 @@ class Connection {
             }
         );
 
-        this._panel.title = 'Connection';
-        this._extensionPath = extensionPath;
+        this.panel.title = 'Connection';
+        this.extensionPath = extensionPath;
 
         // Set the webview's initial html content
-        this._update();
+        this.update();
 
         // Listen for when the panel is disposed
         // This happens when the user closes the panel or when the panel is closed programatically
-        this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+        this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
 
         // Handle messages from the webview
-        this._panel.webview.onDidReceiveMessage(
+        this.panel.webview.onDidReceiveMessage(
             message => {
                 switch (message.command) {
                     case 'send':
-                        let conval: ConnValue = this._fillProps(message.text)
-                        vscode.window.showInformationMessage('Saved')
-                        this.isReady.emit(conval)
-                        this.sleep(500)
-                        this.dispose()
+                        let conval: ConnValue = this.fillConVal(message.text);
+                        vscode.window.showInformationMessage('Saved');
+                        this.isReady.emit(conval);
+                        this.sleep(500);
+                        this.dispose();
                         return;
                 }
             },
             null,
-            this._disposables
+            this.disposables
         );
     }
 
     public dispose() {
         // Clean up our resources
-        this._panel.dispose();
-        while (this._disposables.length) {
-            const x = this._disposables.pop();
+        this.panel.dispose();
+        while (this.disposables.length) {
+            const x = this.disposables.pop();
             if (x) {
                 x.dispose();
             }
@@ -98,27 +100,26 @@ class Connection {
 
     private sleep(delay: number) {
         var start = new Date().getTime();
-        while (new Date().getTime() < start + delay);
+        while (new Date().getTime() < start + delay) {}
     }
 
-    private _update() {
-        // Local path to main script run in the webview
-        const scriptPathOnDisk = vscode.Uri.file(path.join(this._extensionPath, this._resource, this._connJSFiles));
-        const htmlPathOnDisk = path.join(this._extensionPath, this._resource, this._connFile)
-        const stylePathOnDisk = vscode.Uri.file(path.join(this._extensionPath, this._resource, this._style));
+    private update() {
 
-        // And the uri we use to load this script in the webview
-        const scriptUri = this._panel.webview.asWebviewUri(scriptPathOnDisk);
-        const styleUri = this._panel.webview.asWebviewUri(stylePathOnDisk);
+        const scriptPathOnDisk = vscode.Uri.file(path.join(this.extensionPath, this.resource, this.connJSFiles));
+        const htmlPathOnDisk = path.join(this.extensionPath, this.resource, this.connFile);
+        const stylePathOnDisk = vscode.Uri.file(path.join(this.extensionPath, this.resource, this.style));
+
+        const scriptUri = this.panel.webview.asWebviewUri(scriptPathOnDisk);
+        const styleUri = this.panel.webview.asWebviewUri(stylePathOnDisk);
 
         var html: string = '';
-        let nonce = this._getNonce()
+        let nonce = this.getNonce();
         html = fs.readFileSync(htmlPathOnDisk.toString()).toString();
-        let res = html.replace('${scriptUri}', scriptUri.toString()).replace(/\${nonce}/g, nonce).replace('${styleUri}', styleUri.toString())
-        this._panel.webview.html = res
+        html = html.replace('${scriptUri}', scriptUri.toString()).replace(/\${nonce}/g, nonce).replace('${styleUri}', styleUri.toString());
+        this.panel.webview.html = html;
     }
 
-    private _getNonce() {
+    private getNonce() {
         let text = '';
         const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
         for (let i = 0; i < 32; i++) {
@@ -127,32 +128,32 @@ class Connection {
         return text;
     }
 
-    private _fillProps(propString: string): ConnValue {
-        let splitProps = propString.split(";")
-        return new ConnValue(splitProps[0], splitProps[1], splitProps[2], splitProps[3], splitProps[4])
+    private fillConVal(propString: string): ConnValue {
+        let splitProps = propString.split(";");
+        return new ConnValue(splitProps[0], splitProps[1], splitProps[2], splitProps[3], splitProps[4]);
     }
 }
 
 
 export default class ConnectionStore {
 
-    private _extensionPath: string = ''
-    private _passFileName: string = 'pass'
-    private _pathFile: string = ''
+    private extensionPath: string;
+    private passFileName: string = 'pass';
+    private pathFile: string;
     private static instance: ConnectionStore;
-    private _connectionStore: Map<string, ConnValue>;
+    private connectionStore: Map<string, ConnValue>;
     public static lastUsedConnection: ConnValue;
 
     private constructor(extensionPath: string) {
-        this._extensionPath = extensionPath
+        this.extensionPath = extensionPath;
 
-        this._pathFile = path.join(this._extensionPath, this._passFileName)
+        this.pathFile = path.join(this.extensionPath, this.passFileName);
 
         // check is pass file exists
-        if (fs.existsSync(this._pathFile)) {
-            this._connectionStore = this.loadConnections(this._pathFile)
+        if (fs.existsSync(this.pathFile)) {
+            this.connectionStore = this.loadConnections(this.pathFile);
         } else {
-            this._connectionStore = new Map<string, ConnValue>()
+            this.connectionStore = new Map<string, ConnValue>();
         }
     }
 
@@ -160,12 +161,11 @@ export default class ConnectionStore {
         if (!ConnectionStore.instance) {
             ConnectionStore.instance = new ConnectionStore(extensionPath);
         }
-
         return ConnectionStore.instance;
     }
 
     private loadConnections(pathFile: string) {
-        let data = fs.readFileSync(pathFile)
+        let data = fs.readFileSync(pathFile);
         if (data.toString()) {
             return new Map<string, ConnValue>(JSON.parse(data.toString()));
         }
@@ -173,39 +173,39 @@ export default class ConnectionStore {
     }
 
     private flushConnections() {
-        fs.writeFileSync(this._pathFile, JSON.stringify(Array.from(this._connectionStore.entries())), { flag: 'w' })
+        fs.writeFileSync(this.pathFile, JSON.stringify(Array.from(this.connectionStore.entries())), { flag: 'w' });
     }
 
     public addConnection() {
-        let con = new Connection(this._extensionPath)
-        con.isReady.on((conval) => {
+        let con = new Connection(this.extensionPath);
+        con.isReady.once((conval) => {
             try {
                 console.log(conval.connName);
                 if (conval.connName) {
-                    this._connectionStore.set(conval.connName, conval)
-                    this.flushConnections()
+                    this.connectionStore.set(conval.connName, conval);
+                    this.flushConnections();
                 }
             } catch (error) {
                 console.log(error);
             }
-        })
+        });
     }
 
     public deleteConnection(name: string) {
         try {
-            this._connectionStore.delete(name)
-            this.flushConnections()
+            this.connectionStore.delete(name);
+            this.flushConnections();
         }
         catch (err) {
-            console.error(err)
+            console.error(err);
         }
     }
 
     public getConnection(name: string): ConnValue {
-        return (this._connectionStore.get(name) as ConnValue)
+        return (this.connectionStore.get(name) as ConnValue);
     }
 
     public getAllConnectionNames(): Array<string> {
-        return Array.from(this._connectionStore.keys());
+        return Array.from(this.connectionStore.keys());
     }
 }

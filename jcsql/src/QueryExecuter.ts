@@ -1,76 +1,77 @@
 
 import * as vscode from 'vscode';
-import { ConnValue } from './ConnectionStore'
-const odbc = require('odbc');
+import { ConnValue } from './ConnectionStore';
 
 
-class Execution {
+class QueryParser {
 
-    private _conn: ConnValue
-    constructor(connection: ConnValue) {
-        this._conn = connection
+    constructor(queryRawText: string) {
     }
-
-    public queryResult: any | undefined
-
-    private async connecToDB() {
-        let connStr = 'DSN=impala_odbc'
-        return await odbc.connect(connStr)
-    }
-
-    public async execQuery() {
-        // let conn = await this.connecToDB()
-        // let result = await conn.query("select 1 as value , 'asd' as lol union all select 3 as value , 'dsa' as lol ");
-        // console.log(result)
-        this.queryResult = '[1]'
-    }
-
 }
 
 
+class Visualizer {
+
+    private showTextEditorInstance!: vscode.TextEditor;
+    private openSideBySideDirectionInit: any | undefined;
+    private constructor() { }
+
+    public static Create = async () => {
+        const viz = new Visualizer();
+        let doc = await vscode.workspace.openTextDocument();
+        await viz.switch('down');
+        let show = await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two & vscode.ViewColumn.Beside, false);
+        await viz.switch('restore');
+        viz.showTextEditorInstance = show;
+
+        return viz;
+    }
+
+    private async switch(dir: string & 'down' | 'restore') {
+        let workbenchConfig = vscode.workspace.getConfiguration('workbench.editor');
+        let openSideBySideDirection = workbenchConfig.get('openSideBySideDirection');
+
+        switch (dir) {
+            case 'down':
+                this.openSideBySideDirectionInit = openSideBySideDirection;
+                if (openSideBySideDirection === 'down') { return; }
+                await workbenchConfig.update('openSideBySideDirection', 'down', vscode.ConfigurationTarget.Global);
+                break;
+            case 'restore':
+                if (this.openSideBySideDirectionInit === 'down') { return; }
+                await workbenchConfig.update('openSideBySideDirection', this.openSideBySideDirectionInit, vscode.ConfigurationTarget.Global);
+            default:
+                break;
+        }
+    }
+
+    public async show(resultText: string) {
+        let lastline = this.showTextEditorInstance.document.lineAt(
+            this.showTextEditorInstance.document.lineCount - 1).lineNumber;
+
+        await this.switch('down');
+        await this.showTextEditorInstance.edit((edit) => edit.insert(new vscode.Position(lastline, 0), resultText));
+        await this.switch('restore');
+    }
+}
+
 export default class QueryExecuter {
 
-    private _usedConnection: ConnValue;
-    private _queryRawText: string = ''
-    private _exec: Execution;
+    private usedConnection: ConnValue;
+    private queryRawText: string = '';
 
     constructor(connection: ConnValue) {
-        this._usedConnection = connection
+        this.usedConnection = connection;
         let editor = vscode.window.activeTextEditor;
         if (editor) {
             let document = editor.document;
             let selection = editor.selection;
-            this._queryRawText = document.getText(selection)
+            this.queryRawText = document.getText(selection);
         }
-        this._exec = new Execution(connection)
-    }
-
-    private _processQueryText() {
-        return this._queryRawText.trim()
-
     }
 
     public async RunQuery() {
-
-        let queryToExecite = this._processQueryText()
-        await this._exec.execQuery()
-        let quryResult = this._exec.queryResult
-
-
-        let workbenchConfig = vscode.workspace.getConfiguration('workbench.editor')
-        let openSideBySideDirectionOld = workbenchConfig.get('openSideBySideDirection')
-
-        if (openSideBySideDirectionOld != 'down') {
-            await workbenchConfig.update('openSideBySideDirection', 'down', vscode.ConfigurationTarget.Global)
-        }
-
-        let doc = await vscode.workspace.openTextDocument()
-        let show = await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two, false)
-
-        await show.edit((edit) => edit.insert(new vscode.Position(0, 0), quryResult))
-
-        if (openSideBySideDirectionOld != 'down') {
-            await workbenchConfig.update('openSideBySideDirection', openSideBySideDirectionOld, vscode.ConfigurationTarget.Global)
-        }
+        let lol = await Visualizer.Create();
+        await lol.show(this.queryRawText);
     }
 }
