@@ -1,12 +1,46 @@
 
 import * as vscode from 'vscode';
 import { ConnValue } from './ConnectionStore';
+import { TypedEvent } from './TypedEvent';
+import {PythonShell} from 'python-shell';
 
+
+interface Query {
+
+    qyeryText:string;
+    queryType:string;
+}
 
 class QueryParser {
 
-    constructor(queryRawText: string) {
+    private queryRawText:string;
+    private queryType:string;
+
+
+    constructor(queryRawText: string, queryType?:string) {
+        this.queryRawText = queryRawText;
+        this.queryType = '';
     }
+}
+
+class Executer {
+
+
+    constructor (conn:ConnValue, query:Query ) {
+
+    }
+
+    private runPyExec() {
+
+    }
+
+    private sendMessage (msg:string) {
+
+    }
+
+
+
+
 }
 
 
@@ -14,6 +48,9 @@ class Visualizer {
 
     private showTextEditorInstance!: vscode.TextEditor;
     private openSideBySideDirectionInit: any | undefined;
+    public loadData: TypedEvent<string> = new TypedEvent<string>();
+    private lastLine: number = 0;
+
     private constructor() { }
 
     public static Create = async () => {
@@ -23,6 +60,19 @@ class Visualizer {
         let show = await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two & vscode.ViewColumn.Beside, false);
         await viz.switch('restore');
         viz.showTextEditorInstance = show;
+
+        vscode.window.onDidChangeTextEditorVisibleRanges((event) => {
+            if (event.textEditor.document === viz.showTextEditorInstance.document) {
+                let lastVisibleLine = event.visibleRanges[0].end.line;
+
+                if ((lastVisibleLine > 0) && (viz.lastLine === lastVisibleLine)) {
+                    viz.loadData.emit('load');
+                    console.log('EVENT!');
+                    console.log('lastVisibleLine = ' + lastVisibleLine);
+                    console.log('viz.lastLine = ' + viz.lastLine);
+                }
+            }
+        });
 
         return viz;
     }
@@ -46,11 +96,14 @@ class Visualizer {
     }
 
     public async show(resultText: string) {
-        let lastline = this.showTextEditorInstance.document.lineAt(
-            this.showTextEditorInstance.document.lineCount - 1).lineNumber;
+        let lastline = () => {
+            return this.showTextEditorInstance.document.lineAt(
+                this.showTextEditorInstance.document.lineCount - 1).lineNumber;
+        };
 
         await this.switch('down');
-        await this.showTextEditorInstance.edit((edit) => edit.insert(new vscode.Position(lastline, 0), resultText));
+        await this.showTextEditorInstance.edit((edit) => edit.insert(new vscode.Position(lastline(), 0), resultText));
+        this.lastLine = lastline();
         await this.switch('restore');
     }
 }
@@ -70,8 +123,21 @@ export default class QueryExecuter {
         }
     }
 
+    private genData(x:number) {
+        let res: string = '';
+        for (let i = 0 + x; i < 50 + x; i++) {
+            res += `${i}\t-\trow\n`;
+        }
+        return res;
+    }
+
+
     public async RunQuery() {
         let lol = await Visualizer.Create();
-        await lol.show(this.queryRawText);
+        await lol.show(this.genData(0));
+
+        lol.loadData.on( async () => {
+            await lol.show(this.genData(50));
+        });
     }
 }

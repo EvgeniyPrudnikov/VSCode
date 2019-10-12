@@ -16,13 +16,12 @@ export class ConnValue {
         this.connEnv = connEnv;
         this.connUser = connUser;
         this.connPass = connPass;
-        this.connString = connString;
+        this.connString = this.parseConnStr(connString);
     }
 
-    private parseConnStr(connstr:string) {
-
+    private parseConnStr = (connstr:string) => {
+        return connstr.trim().replace('"','').replace("'","");
     }
-
 }
 
 class Connection {
@@ -180,7 +179,6 @@ export default class ConnectionStore {
         let con = new Connection(this.extensionPath);
         con.isReady.once((conval) => {
             try {
-                console.log(conval.connName);
                 if (conval.connName) {
                     this.connectionStore.set(conval.connName, conval);
                     this.flushConnections();
