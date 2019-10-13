@@ -12,7 +12,7 @@
 
         vscode.postMessage({
             command: 'send',
-            text: `${connName};${envValue};${userName};${userPass};${connString}`
+            text: `${connName}|${envValue}|${userName}|${userPass}|${connString}`
         });
     }
 

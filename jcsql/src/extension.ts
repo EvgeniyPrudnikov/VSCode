@@ -33,7 +33,7 @@ export function activate(context: vscode.ExtensionContext) {
             const value = await vscode.window.showQuickPick(connections, { placeHolder: 'Select the connection to run code' });
             if (value) {
                 let conn = connStore.getConnection(value);
-                let exec = new QueryExecuter(conn);
+                let exec = new QueryExecuter(conn, context.extensionPath);
                 exec.RunQuery();
             }
         })

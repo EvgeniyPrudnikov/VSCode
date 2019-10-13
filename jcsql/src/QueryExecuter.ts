@@ -1,23 +1,24 @@
 
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { ConnValue } from './ConnectionStore';
 import { TypedEvent } from './TypedEvent';
-import {PythonShell} from 'python-shell';
+import { PythonShell } from 'python-shell';
 
 
 interface Query {
 
-    qyeryText:string;
-    queryType:string;
+    qyeryText: string;
+    queryType: string;
 }
 
 class QueryParser {
 
-    private queryRawText:string;
-    private queryType:string;
+    private queryRawText: string;
+    private queryType: string;
 
 
-    constructor(queryRawText: string, queryType?:string) {
+    constructor(queryRawText: string, queryType?: string) {
         this.queryRawText = queryRawText;
         this.queryType = '';
     }
@@ -25,22 +26,70 @@ class QueryParser {
 
 class Executer {
 
+    private clientName: string = 'Client.py';
+    private resource = 'resources';
+    private pyResources = 'pyResources';
+    private connString: string;
+    private query: Query;
+    private executer: PythonShell;
+    private data: string = '';
 
-    constructor (conn:ConnValue, query:Query ) {
+
+    constructor(extensionPath: string, conn: ConnValue, query: Query) {
+        this.connString = conn.connString.replace('{UID}', conn.connUser).replace('{PWD}', conn.connPass);
+        this.query = query;
+
+        let pythonPath = String(vscode.workspace.getConfiguration('python', null).get('pythonPath'));
+
+        this.executer = new PythonShell(this.getClientPath(extensionPath), {
+            mode: 'text',
+            pythonPath: pythonPath,
+            pythonOptions: ['-u'], // get print results in real-time
+            args: [conn.connEnv, this.connString, this.query.qyeryText, this.query.queryType]
+        });
+
+        this.executer.on('message', (message) => {
+            this.data += message + '\n';
+        });
 
     }
 
-    private runPyExec() {
-
+    private getClientPath(extensionPath: string) {
+        return path.join(extensionPath, this.resource, this.pyResources, this.clientName);
     }
 
-    private sendMessage (msg:string) {
+    public fethData(msg: string) {
+        // clear data before get more
+        this.data = '';
+        if (!this.executer.terminated) {
+            this.executer.send(msg);
+        }
+    }
 
+    public close() {
+        this.executer.end(function (err,code,signal) {
+            if (err) { throw err; }
+            console.log('The exit code was: ' + code);
+            console.log('The exit signal was: ' + signal);
+            console.log('finished');
+          });
     }
 
 
-
-
+    public getData() {
+        // wait for data arive
+        let obj = this;
+        let promise = new Promise<string>(function (resolve) {
+            setTimeout(function waitData(lData) {
+                if (lData !== '') {
+                    resolve(lData);
+                } else {
+                    setTimeout(waitData, 50, obj.data);
+                }
+            }, 50, obj.data);
+        });
+        return promise;
+    }
 }
 
 
@@ -64,12 +113,10 @@ class Visualizer {
         vscode.window.onDidChangeTextEditorVisibleRanges((event) => {
             if (event.textEditor.document === viz.showTextEditorInstance.document) {
                 let lastVisibleLine = event.visibleRanges[0].end.line;
+                let isClosed = event.textEditor.document.isClosed;
 
-                if ((lastVisibleLine > 0) && (viz.lastLine === lastVisibleLine)) {
-                    viz.loadData.emit('load');
-                    console.log('EVENT!');
-                    console.log('lastVisibleLine = ' + lastVisibleLine);
-                    console.log('viz.lastLine = ' + viz.lastLine);
+                if ((lastVisibleLine > 0) && (viz.lastLine === lastVisibleLine) && !isClosed) {
+                    viz.loadData.emit('load:100');
                 }
             }
         });
@@ -112,9 +159,11 @@ export default class QueryExecuter {
 
     private usedConnection: ConnValue;
     private queryRawText: string = '';
+    private extensionPath: string;
 
-    constructor(connection: ConnValue) {
+    constructor(connection: ConnValue, extensionPath: string) {
         this.usedConnection = connection;
+        this.extensionPath = extensionPath;
         let editor = vscode.window.activeTextEditor;
         if (editor) {
             let document = editor.document;
@@ -123,21 +172,26 @@ export default class QueryExecuter {
         }
     }
 
-    private genData(x:number) {
-        let res: string = '';
-        for (let i = 0 + x; i < 50 + x; i++) {
-            res += `${i}\t-\trow\n`;
-        }
-        return res;
-    }
-
 
     public async RunQuery() {
-        let lol = await Visualizer.Create();
-        await lol.show(this.genData(0));
 
-        lol.loadData.on( async () => {
-            await lol.show(this.genData(50));
-        });
+        let query: Query = { qyeryText: "select * from all_objects", queryType: 'query' };
+        let exec = new Executer(this.extensionPath, this.usedConnection, query);
+        let lol = await Visualizer.Create();
+        let data = await exec.getData();
+        await lol.show(data);
+        try {
+            lol.loadData.on(async (msg) => {
+                exec.fethData(msg);
+                data = await exec.getData();
+                await lol.show(data);
+                if (data.includes('Fetched')) {
+                    exec.close();
+                    return;
+                }
+            });
+        } catch (err) {
+            console.log(err);
+        }
     }
 }

@@ -19,8 +19,8 @@ export class ConnValue {
         this.connString = this.parseConnStr(connString);
     }
 
-    private parseConnStr = (connstr:string) => {
-        return connstr.trim().replace('"','').replace("'","");
+    private parseConnStr = (connstr: string) => {
+        return connstr.trim().replace('"', '').replace("'", "");
     }
 }
 
@@ -30,6 +30,7 @@ class Connection {
     private connJSFiles = 'main.js';
     private style = 'style.css';
     private resource = 'resources';
+    private connResources = 'connResources';
 
     isReady = new TypedEvent<ConnValue>();
 
@@ -54,7 +55,7 @@ class Connection {
                 // Enable javascript in the webview
                 enableScripts: true,
                 // And restrict the webview to only loading content from our extension's `resources` directory.
-                localResourceRoots: [vscode.Uri.file(path.join(extensionPath, 'resources'))]
+                localResourceRoots: [vscode.Uri.file(path.join(extensionPath, this.resource, this.connResources))]
             }
         );
 
@@ -99,14 +100,14 @@ class Connection {
 
     private sleep(delay: number) {
         var start = new Date().getTime();
-        while (new Date().getTime() < start + delay) {}
+        while (new Date().getTime() < start + delay) { }
     }
 
     private update() {
 
-        const scriptPathOnDisk = vscode.Uri.file(path.join(this.extensionPath, this.resource, this.connJSFiles));
-        const htmlPathOnDisk = path.join(this.extensionPath, this.resource, this.connFile);
-        const stylePathOnDisk = vscode.Uri.file(path.join(this.extensionPath, this.resource, this.style));
+        const scriptPathOnDisk = vscode.Uri.file(path.join(this.extensionPath, this.resource, this.connResources, this.connJSFiles));
+        const htmlPathOnDisk = path.join(this.extensionPath, this.resource, this.connResources, this.connFile);
+        const stylePathOnDisk = vscode.Uri.file(path.join(this.extensionPath, this.resource, this.connResources, this.style));
 
         const scriptUri = this.panel.webview.asWebviewUri(scriptPathOnDisk);
         const styleUri = this.panel.webview.asWebviewUri(stylePathOnDisk);
@@ -128,8 +129,8 @@ class Connection {
     }
 
     private fillConVal(propString: string): ConnValue {
-        let splitProps = propString.split(";");
-        return new ConnValue(splitProps[0], splitProps[1], splitProps[2], splitProps[3], splitProps[4]);
+        let propsArray = propString.split('|');
+        return new ConnValue(propsArray[0], propsArray[1], propsArray[2], propsArray[3], propsArray[4]);
     }
 }
 
@@ -138,6 +139,9 @@ export default class ConnectionStore {
 
     private extensionPath: string;
     private passFileName: string = 'pass';
+    private resource = 'resources';
+    private passResources = 'passResources';
+
     private pathFile: string;
     private static instance: ConnectionStore;
     private connectionStore: Map<string, ConnValue>;
@@ -146,7 +150,7 @@ export default class ConnectionStore {
     private constructor(extensionPath: string) {
         this.extensionPath = extensionPath;
 
-        this.pathFile = path.join(this.extensionPath, this.passFileName);
+        this.pathFile = path.join(this.extensionPath, this.resource, this.passResources, this.passFileName);
 
         // check is pass file exists
         if (fs.existsSync(this.pathFile)) {
