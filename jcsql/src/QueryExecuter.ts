@@ -183,6 +183,8 @@ export default class QueryExecuter {
             try {
                 console.log(msg);
                 exec.fethData(msg);
+                let pop = await exec.getData();
+                lol.show(pop);
             } catch (err) {
                 console.log(err);
             }
