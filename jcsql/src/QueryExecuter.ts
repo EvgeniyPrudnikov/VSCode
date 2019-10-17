@@ -46,7 +46,7 @@ class Executer {
 
         let pythonPath = String(vscode.workspace.getConfiguration('python', null).get('pythonPath'));
 
-        this.executer = cp.spawn(pythonPath, ['-u', '-i', this.getClientPath(extensionPath), conn.connEnv, 'DSN=oracle_odbc;UID=e_prudnikov;PWD=S2hUdYTnR3HFwtnPLUW2', query.qyeryText, query.queryType]);
+        this.executer = cp.spawn(pythonPath, ['-u', '-i', this.getClientPath(extensionPath), conn.connEnv, '', query.qyeryText, query.queryType]);
 
         this.executer.stdout.on('data', async (data: Buffer) => {
             try {
