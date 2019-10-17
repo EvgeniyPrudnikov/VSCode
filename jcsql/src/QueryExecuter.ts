@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { ConnValue } from './ConnectionStore';
 import { TypedEvent } from './TypedEvent';
-import { PythonShell } from 'python-shell';
+import * as cp from 'child_process';
 
 
 interface Query {
@@ -24,6 +24,11 @@ class QueryParser {
     }
 }
 
+interface Data {
+    data: string;
+    state: string & 'new' | 'old';
+}
+
 class Executer {
 
     private clientName: string = 'Client.py';
@@ -31,7 +36,7 @@ class Executer {
     private pyResources = 'pyResources';
     private connString: string;
     private query: Query;
-    private executer: PythonShell;
+    private executer: cp.ChildProcess;
     private data: string = '';
 
 
@@ -41,15 +46,15 @@ class Executer {
 
         let pythonPath = String(vscode.workspace.getConfiguration('python', null).get('pythonPath'));
 
-        this.executer = new PythonShell(this.getClientPath(extensionPath), {
-            mode: 'text',
-            pythonPath: pythonPath,
-            pythonOptions: ['-u'], // get print results in real-time
-            args: [conn.connEnv, this.connString, this.query.qyeryText, this.query.queryType]
-        });
+        this.executer = cp.spawn(pythonPath, ['-u', '-i', this.getClientPath(extensionPath), conn.connEnv, 'DSN=oracle_odbc;UID=e_prudnikov;PWD=S2hUdYTnR3HFwtnPLUW2', query.qyeryText, query.queryType]);
 
-        this.executer.on('message', (message) => {
-            this.data += message + '\n';
+        this.executer.stdout.on('data', async (data: Buffer) => {
+            try {
+                this.data += data.toString();
+                console.log(data.toString());
+            } catch (err) {
+                console.log(err);
+            }
         });
 
     }
@@ -60,20 +65,13 @@ class Executer {
 
     public fethData(msg: string) {
         // clear data before get more
+        let buf = Buffer.from(msg);
         this.data = '';
-        if (!this.executer.terminated) {
-            this.executer.send(msg);
+        if (this.executer) {
+            this.executer.stdin.write(buf);
         }
     }
 
-    public close() {
-        this.executer.end(function (err,code,signal) {
-            if (err) { throw err; }
-            console.log('The exit code was: ' + code);
-            console.log('The exit signal was: ' + signal);
-            console.log('finished');
-          });
-    }
 
 
     public getData() {
@@ -81,7 +79,7 @@ class Executer {
         let obj = this;
         let promise = new Promise<string>(function (resolve) {
             setTimeout(function waitData(lData) {
-                if (lData !== '') {
+                if (lData.includes('Fetched')) {
                     resolve(lData);
                 } else {
                     setTimeout(waitData, 50, obj.data);
@@ -91,7 +89,6 @@ class Executer {
         return promise;
     }
 }
-
 
 class Visualizer {
 
@@ -149,7 +146,7 @@ class Visualizer {
         };
 
         await this.switch('down');
-        await this.showTextEditorInstance.edit((edit) => edit.insert(new vscode.Position(lastline(), 0), resultText));
+        await this.showTextEditorInstance.edit((edit) => edit.insert(new vscode.Position(0, 0), resultText));
         this.lastLine = lastline();
         await this.switch('restore');
     }
@@ -175,23 +172,22 @@ export default class QueryExecuter {
 
     public async RunQuery() {
 
-        let query: Query = { qyeryText: "select * from all_objects", queryType: 'query' };
+        let query: Query = { qyeryText: "select * from lool__1 where rownum < 1000 order by id", queryType: 'query' };
         let exec = new Executer(this.extensionPath, this.usedConnection, query);
         let lol = await Visualizer.Create();
-        let data = await exec.getData();
-        await lol.show(data);
-        try {
-            lol.loadData.on(async (msg) => {
+
+        let pop = await exec.getData();
+        lol.show(pop);
+
+        lol.loadData.on(async (msg) => {
+            try {
+                console.log(msg);
                 exec.fethData(msg);
-                data = await exec.getData();
-                await lol.show(data);
-                if (data.includes('Fetched')) {
-                    exec.close();
-                    return;
-                }
-            });
-        } catch (err) {
-            console.log(err);
-        }
+            } catch (err) {
+                console.log(err);
+            }
+        });
+
+
     }
 }

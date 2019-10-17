@@ -19,6 +19,8 @@ def pretty_print_result(output):
         if row_index == 0 or (row_index == len(l_output) - 1):
             print('+' + ''.join(['-' * x + '--+' for x in max_col_length]))
 
+    print('Fetched {0} rows\n'.format(len(output) - 1))
+
 
 def fetch_data(cur, res, fetch_num=100, with_header=False):
 
@@ -70,8 +72,8 @@ def main():
             >> exit:0
             '''
             input_msg = sys.stdin.readline()
-            print(input_msg)
-            cmd = input_msg.split(':')
+            print(input_msg.decode('utf-8'))
+            cmd = input_msg.decode('utf-8').split(':')
             if cmd[0] == 'load':
                 fetched_rows += fetch_data(cur, result, fetch_num=int(cmd[1]))
                 pretty_print_result(result)
@@ -82,7 +84,7 @@ def main():
             print(e)
             break
 
-    print('Fetched {0} rows\n'.format(fetched_rows))
+
     cur.close()
     db.close()
 
