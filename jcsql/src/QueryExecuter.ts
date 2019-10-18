@@ -72,8 +72,7 @@ class Executer {
         // clear data before get more
         this.data = { data: '', state: 'old' };
 
-        if (this.executer.connected) {
-            console.log('fetch')
+        if (this.executer) {
             this.executer.stdin.write(msg + '\n');
         }
     }
@@ -102,7 +101,7 @@ class Visualizer {
     private lastLineNum: number = 0;
     private isReady: boolean = true;
 
-    constructor() {}
+    constructor() { }
 
     public static Create = async () => {
         const viz = new Visualizer();
@@ -121,9 +120,9 @@ class Visualizer {
                 setTimeout(() => {
                     if ((lastVisibleLineNum > 0) && (viz.lastLineNum === lastVisibleLineNum) && !isClosed && viz.isReady) {
                         viz.loadData.emit('load:100');
-                        console.log('event')
+                        viz.isReady = false;
                     }
-                }, 500);
+                }, 200);
             }
         });
 
@@ -155,7 +154,7 @@ class Visualizer {
     }
 
     public async show(resultText: string) {
-        this.isReady = false;
+
         let lastline = () => {
             return this.textEditorInstance.document.lineAt(
                 this.textEditorInstance.document.lineCount - 1);
@@ -195,7 +194,7 @@ export default class QueryExecuter {
 
     public async RunQuery() {
 
-        let query: Query = { qyeryText: "select * from lool__1 where rownum < 10 order by id", queryType: 'query' };
+        let query: Query = { qyeryText: "select * from lool__1 where rownum < 1000 order by id", queryType: 'query' };
         let exec = new Executer(this.extensionPath, this.usedConnection, query);
         let visualizer = await Visualizer.Create();
 
