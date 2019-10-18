@@ -43,10 +43,11 @@ class Executer {
     constructor(extensionPath: string, conn: ConnValue, query: Query) {
         this.connString = conn.connString.replace('{UID}', conn.connUser).replace('{PWD}', conn.connPass);
         this.query = query;
+        this.connString = this.getConnStr(conn);
 
         let pythonPath = String(vscode.workspace.getConfiguration('python', null).get('pythonPath'));
 
-        this.executer = cp.spawn(pythonPath, ['-u', '-i', this.getClientPath(extensionPath), conn.connEnv, '', query.qyeryText, query.queryType]);
+        this.executer = cp.spawn(pythonPath, ['-u', '-i', this.getClientPath(extensionPath), conn.connEnv, this.connString, this.query.qyeryText, this.query.queryType]);
         this.executer.stdin.setDefaultEncoding('utf-8');
 
         this.executer.stdout.on('data', async (data: Buffer) => {
@@ -69,6 +70,10 @@ class Executer {
 
     }
 
+    private getConnStr(conn: ConnValue) {
+        return conn.connString.replace('{UID}', conn.connUser).replace('{PWD}', conn.connPass);
+    }
+
     private getClientPath(extensionPath: string) {
         return path.join(extensionPath, this.resource, this.pyResources, this.clientName);
     }
@@ -81,8 +86,6 @@ class Executer {
             this.executer.stdin.write(msg + '\n');
         }
     }
-
-
 
     public getData() {
         // wait for data arive
@@ -108,7 +111,10 @@ class Visualizer {
     private lastLineNum: number = 0;
     private isReady: boolean = true;
 
-    private constructor() { }
+    constructor() {
+
+
+    }
 
     public static Create = async () => {
         const viz = new Visualizer();
