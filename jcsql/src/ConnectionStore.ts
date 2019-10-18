@@ -34,7 +34,7 @@ class Connection {
 
     isReady = new TypedEvent<ConnValue>();
 
-    public static readonly viewType = 'Connection';
+    public readonly viewType = 'Connection';
 
     private readonly panel: vscode.WebviewPanel;
     private readonly extensionPath: string;
@@ -48,8 +48,8 @@ class Connection {
             : undefined;
 
         this.panel = vscode.window.createWebviewPanel(
-            Connection.viewType,
-            Connection.viewType,
+            this.viewType,
+            this.viewType,
             column || vscode.ViewColumn.Two,
             {
                 // Enable javascript in the webview

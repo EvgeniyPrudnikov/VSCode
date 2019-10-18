@@ -41,7 +41,7 @@ class Executer {
 
 
     constructor(extensionPath: string, conn: ConnValue, query: Query) {
-        this.connString = conn.connString.replace('{UID}', conn.connUser).replace('{PWD}', conn.connPass);
+
         this.query = query;
         this.connString = this.getConnStr(conn);
 
@@ -58,16 +58,6 @@ class Executer {
                 console.log(err);
             }
         });
-
-        this.executer.on('close', (code) => {
-            console.log('close');
-
-        });
-        this.executer.on('exit', (code) => {
-            console.log('exit');
-            console.log(this.executer);
-        });
-
     }
 
     private getConnStr(conn: ConnValue) {
@@ -82,7 +72,8 @@ class Executer {
         // clear data before get more
         this.data = { data: '', state: 'old' };
 
-        if (this.executer) {
+        if (this.executer.connected) {
+            console.log('fetch')
             this.executer.stdin.write(msg + '\n');
         }
     }
@@ -111,10 +102,7 @@ class Visualizer {
     private lastLineNum: number = 0;
     private isReady: boolean = true;
 
-    constructor() {
-
-
-    }
+    constructor() {}
 
     public static Create = async () => {
         const viz = new Visualizer();
@@ -133,6 +121,7 @@ class Visualizer {
                 setTimeout(() => {
                     if ((lastVisibleLineNum > 0) && (viz.lastLineNum === lastVisibleLineNum) && !isClosed && viz.isReady) {
                         viz.loadData.emit('load:100');
+                        console.log('event')
                     }
                 }, 500);
             }
@@ -140,7 +129,7 @@ class Visualizer {
 
         vscode.window.onDidChangeActiveTextEditor((event) => {
             if (event === viz.textEditorInstance) {
-
+                // nothing
             }
         });
 
