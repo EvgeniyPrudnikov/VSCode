@@ -32,6 +32,9 @@ def fetch_data(cur, res, fetch_num=100, with_header=False):
 
     res += result
 
+    if len(result) == 0 or len(result) < fetch_num:
+        return -1
+
     return len(result)
 
 
@@ -40,8 +43,6 @@ def main():
     conn_str = sys.argv[2]
     query = sys.argv[3]
     qtype = sys.argv[4]
-
-    fetched_rows = 0
 
     result = []
     exec_module = None
@@ -55,9 +56,15 @@ def main():
     try:
         db = exec_module.connect_to_db(conn_str)
         cur = exec_module.execute_query(db, query, qtype)
-        fetched_rows += fetch_data(cur, result, with_header=True)
+        rows_cnt = fetch_data(cur, result, with_header=True)
 
         pretty_print_result(result)
+
+        if rows_cnt < 0:
+            cur.close()
+            db.close()
+            exit(0)
+
     except Exception as e:
         print(str(e) + '\n')
         exit(1)
@@ -68,22 +75,24 @@ def main():
     while time.time() < timeout:
         try:
             '''messages like :
-            >> load:50
+            >> load:100
             >> exit:0
             '''
             input_msg = sys.stdin.readline()
-            print(input_msg.decode('utf-8'))
-            cmd = input_msg.decode('utf-8').split(':')
+            cmd = input_msg.split(':')
             if cmd[0] == 'load':
-                fetched_rows += fetch_data(cur, result, fetch_num=int(cmd[1]))
+                rows_cnt = fetch_data(cur, result, fetch_num=int(cmd[1]))
                 pretty_print_result(result)
+
+                if rows_cnt < 0:
+                    break
+
                 timeout += 10
             else:
                 break
         except Exception as e:
             print(e)
             break
-
 
     cur.close()
     db.close()

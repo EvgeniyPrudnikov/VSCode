@@ -37,7 +37,7 @@ class Executer {
     private connString: string;
     private query: Query;
     private executer: cp.ChildProcess;
-    private data: string = '';
+    private data: Data = { data: '', state: 'new' };
 
 
     constructor(extensionPath: string, conn: ConnValue, query: Query) {
@@ -47,14 +47,24 @@ class Executer {
         let pythonPath = String(vscode.workspace.getConfiguration('python', null).get('pythonPath'));
 
         this.executer = cp.spawn(pythonPath, ['-u', '-i', this.getClientPath(extensionPath), conn.connEnv, '', query.qyeryText, query.queryType]);
+        this.executer.stdin.setDefaultEncoding('utf-8');
 
         this.executer.stdout.on('data', async (data: Buffer) => {
             try {
-                this.data += data.toString();
-                console.log(data.toString());
+                this.data.state = 'new';
+                this.data.data += data.toString();
             } catch (err) {
                 console.log(err);
             }
+        });
+
+        this.executer.on('close', (code) => {
+            console.log('close');
+
+        });
+        this.executer.on('exit', (code) => {
+            console.log('exit');
+            console.log(this.executer);
         });
 
     }
@@ -65,10 +75,10 @@ class Executer {
 
     public fethData(msg: string) {
         // clear data before get more
-        let buf = Buffer.from(msg);
-        this.data = '';
+        this.data = { data: '', state: 'old' };
+
         if (this.executer) {
-            this.executer.stdin.write(buf);
+            this.executer.stdin.write(msg + '\n');
         }
     }
 
@@ -79,12 +89,12 @@ class Executer {
         let obj = this;
         let promise = new Promise<string>(function (resolve) {
             setTimeout(function waitData(lData) {
-                if (lData.includes('Fetched')) {
-                    resolve(lData);
+                if (lData.data.includes('Fetched') && lData.state === 'new') {
+                    resolve(lData.data);
                 } else {
-                    setTimeout(waitData, 50, obj.data);
+                    setTimeout(waitData, 100, obj.data);
                 }
-            }, 50, obj.data);
+            }, 100, obj.data);
         });
         return promise;
     }
@@ -92,10 +102,11 @@ class Executer {
 
 class Visualizer {
 
-    private showTextEditorInstance!: vscode.TextEditor;
+    private textEditorInstance!: vscode.TextEditor;
     private openSideBySideDirectionInit: any | undefined;
     public loadData: TypedEvent<string> = new TypedEvent<string>();
-    private lastLine: number = 0;
+    private lastLineNum: number = 0;
+    private isReady: boolean = true;
 
     private constructor() { }
 
@@ -105,16 +116,25 @@ class Visualizer {
         await viz.switch('down');
         let show = await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two & vscode.ViewColumn.Beside, false);
         await viz.switch('restore');
-        viz.showTextEditorInstance = show;
+        viz.textEditorInstance = show;
+
 
         vscode.window.onDidChangeTextEditorVisibleRanges((event) => {
-            if (event.textEditor.document === viz.showTextEditorInstance.document) {
-                let lastVisibleLine = event.visibleRanges[0].end.line;
+            if (event.textEditor.document === viz.textEditorInstance.document) {
+                let lastVisibleLineNum = event.visibleRanges[0].end.line;
                 let isClosed = event.textEditor.document.isClosed;
 
-                if ((lastVisibleLine > 0) && (viz.lastLine === lastVisibleLine) && !isClosed) {
-                    viz.loadData.emit('load:100');
-                }
+                setTimeout(() => {
+                    if ((lastVisibleLineNum > 0) && (viz.lastLineNum === lastVisibleLineNum) && !isClosed && viz.isReady) {
+                        viz.loadData.emit('load:100');
+                    }
+                }, 500);
+            }
+        });
+
+        vscode.window.onDidChangeActiveTextEditor((event) => {
+            if (event === viz.textEditorInstance) {
+
             }
         });
 
@@ -140,15 +160,23 @@ class Visualizer {
     }
 
     public async show(resultText: string) {
+        this.isReady = false;
         let lastline = () => {
-            return this.showTextEditorInstance.document.lineAt(
-                this.showTextEditorInstance.document.lineCount - 1).lineNumber;
+            return this.textEditorInstance.document.lineAt(
+                this.textEditorInstance.document.lineCount - 1);
         };
 
+        let textRange = new vscode.Range(0, 0, lastline().range.end.line, lastline().range.end.character);
+
         await this.switch('down');
-        await this.showTextEditorInstance.edit((edit) => edit.insert(new vscode.Position(0, 0), resultText));
-        this.lastLine = lastline();
+        await this.textEditorInstance.edit(edit => {
+            edit.delete(textRange);
+            edit.insert(new vscode.Position(0, 0), resultText);
+        });
+
+        this.lastLineNum = lastline().lineNumber;
         await this.switch('restore');
+        this.isReady = true;
     }
 }
 
@@ -172,24 +200,21 @@ export default class QueryExecuter {
 
     public async RunQuery() {
 
-        let query: Query = { qyeryText: "select * from lool__1 where rownum < 1000 order by id", queryType: 'query' };
+        let query: Query = { qyeryText: "select * from lool__1 where rownum < 10 order by id", queryType: 'query' };
         let exec = new Executer(this.extensionPath, this.usedConnection, query);
-        let lol = await Visualizer.Create();
+        let visualizer = await Visualizer.Create();
 
         let pop = await exec.getData();
-        lol.show(pop);
+        await visualizer.show(pop);
 
-        lol.loadData.on(async (msg) => {
+        visualizer.loadData.on(async (msg) => {
             try {
-                console.log(msg);
                 exec.fethData(msg);
                 let pop = await exec.getData();
-                lol.show(pop);
+                await visualizer.show(pop);
             } catch (err) {
                 console.log(err);
             }
         });
-
-
     }
 }
