@@ -16,7 +16,7 @@ def pretty_print_result(output):
     for row_index, row in enumerate(l_output):
         print('|' + ''.join([' ' + str(value).replace('None', 'NULL') + ' ' * (
             max_col_length[index] - len(str(value))) + ' |' for index, value in enumerate(row)]))
-        if row_index == 0 or (row_index == len(l_output) - 1):
+        if row_index == 0 or row_index == len(l_output) - 1:
             print('+' + ''.join(['-' * x + '--+' for x in max_col_length]))
 
     print('Fetched {0} rows\n'.format(len(output) - 1))
@@ -32,7 +32,7 @@ def fetch_data(cur, res, fetch_num=100, with_header=False):
 
     res += result
 
-    if len(result) == 0 or len(result) < fetch_num:
+    if len(result) == 0 or len(result) <= fetch_num:
         return -1
 
     return len(result)
@@ -96,6 +96,7 @@ def main():
 
     cur.close()
     db.close()
+    exit(0)
 
 
 if __name__ == '__main__':

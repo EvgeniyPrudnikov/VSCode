@@ -14,7 +14,7 @@
 			"args": [
 				"oracle",
 				"DSN=oracle_odbc;UID=js;PWD=js",
-				"select a from lool__1 where rownum < 1000",
+				"select * from lool__1 where rownum <= 200 order by id",
 				"query"
 			]
 		},
