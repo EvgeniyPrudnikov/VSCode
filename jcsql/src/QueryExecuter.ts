@@ -79,7 +79,7 @@ class Executer {
         this.executer.stderr.on('data', (data: Buffer) => {
             let dataStr = data.toString();
             console.log(dataStr)
-            if (dataStr.includes('SystemExit: 0')) {
+            if (dataStr.includes('SystemExit:')) {
                 this.executer.kill();
                 this.data = { data: '', state: 'old' };
             }
