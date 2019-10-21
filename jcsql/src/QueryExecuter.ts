@@ -68,12 +68,15 @@ class Executer {
         this.executer = cp.spawn(pythonPath, ['-u', '-i', this.getClientPath(extensionPath), conn.connEnv, this.connString, this.query.qyeryText, this.query.queryType]);
         this.executer.stdin.setDefaultEncoding('utf-8');
 
-        this.executer.stdout.on('data', async (data: Buffer) => {
-            try {
-                this.data.state = 'new';
-                this.data.data += data.toString();
-            } catch (err) {
-                console.log(err);
+        this.executer.stdout.on('data', (data: Buffer) => {
+            this.data.state = 'new';
+            this.data.data += data.toString();
+        });
+
+        this.executer.stderr.on('data', (data: Buffer) => {
+            let dataStr = data.toString();
+            if (dataStr.includes('SystemExit: 0')) {
+                this.executer.kill();
             }
         });
     }
@@ -90,9 +93,12 @@ class Executer {
         // clear data before get more
         this.data = { data: '', state: 'old' };
 
-        if (this.executer) {
+        if (!this.executer.killed) {
             this.executer.stdin.write(msg + '\n');
+            return true;
         }
+
+        return false;
     }
 
     public getData() {
@@ -119,7 +125,7 @@ class Visualizer {
     private lastLineNum: number = 0;
     private isReady: boolean = true;
 
-    constructor() { }
+    private constructor() { }
 
     public static Create = async () => {
         const viz = new Visualizer();
@@ -128,7 +134,6 @@ class Visualizer {
         let show = await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two & vscode.ViewColumn.Beside, false);
         await viz.switch('restore');
         viz.textEditorInstance = show;
-
 
         vscode.window.onDidChangeTextEditorVisibleRanges((event) => {
             if (event.textEditor.document === viz.textEditorInstance.document) {
@@ -143,7 +148,10 @@ class Visualizer {
                 }, 200);
             }
         });
+<<<<<<< HEAD
 
+=======
+>>>>>>> 844f2cb70f776bd2871f321c7530b15b9fcd24f1
         return viz;
     }
 
@@ -206,23 +214,32 @@ export default class QueryExecuter {
 
     public async RunQuery() {
 
+<<<<<<< HEAD
         // let query: IQuery = new QueryParser(this.queryRawText).query;
         let query: IQuery = { qyeryText:'EXPLAIN PLAN FOR select * from dual', queryType:'explain'};
 
+=======
+        let query: Query = { qyeryText: "select * from lool__1 where rownum <= 200 order by id", queryType: 'query' };
+>>>>>>> 844f2cb70f776bd2871f321c7530b15b9fcd24f1
         let exec = new Executer(this.extensionPath, this.usedConnection, query);
         let visualizer = await Visualizer.Create();
 
         let pop = await exec.getData();
         await visualizer.show(pop);
 
-        visualizer.loadData.on(async (msg) => {
+        visualizer.loadData.on(async function display(msg) {
             try {
-                exec.fethData(msg);
+                let connected = exec.fethData(msg);
+                if (!connected) {
+                    visualizer.loadData.off(display);
+                    return;
+                }
                 let pop = await exec.getData();
                 await visualizer.show(pop);
             } catch (err) {
                 console.log(err);
             }
         });
+
     }
 }
