@@ -2,6 +2,8 @@ import os
 import sys
 import numpy as np
 import time
+import threading
+from queue import Queue
 
 
 def pretty_print_result(output):
@@ -32,7 +34,7 @@ def fetch_data(cur, res, fetch_num=100, with_header=False):
 
     res += result
 
-    if len(result) == 0 or len(result) <= fetch_num:
+    if len(result) == 0 or len(result) <= fetch_num - 1:
         return -1
 
     return len(result)
@@ -50,15 +52,27 @@ def exec_query(cur):
         exit(0)
 
     # default timeout 1 min
-    timeout = time.time() + 60
+    timeout = time.time() + 5
+
+    input_msgs = Queue()
+    input_t = threading.Thread(target=lambda msg_q: msg_q.put(sys.stdin.readline()), args=(input_msgs,))
+    input_t.daemon = True
+    input_t.start()
+
+
     while time.time() < timeout:
         try:
             '''messages like :
             >> load:100
             >> exit:0
             '''
-            input_msg = sys.stdin.readline()
-            cmd = input_msg.split(':')
+
+            if input_msgs.empty():
+                time.sleep(0.2)
+                continue
+
+            cmd = input_msgs.get().split(':')
+
             if cmd[0] == 'load':
                 rows_cnt = fetch_data(cur, result, fetch_num=int(cmd[1]))
                 pretty_print_result(result)
@@ -69,11 +83,11 @@ def exec_query(cur):
                 timeout += 10
             else:
                 break
+
         except Exception as e:
-            print(e)
-            break
+            raise Exception(str(e))
     cur.close()
-    exit(0)
+
 
 
 def exec_explain(cur, env):
@@ -83,6 +97,7 @@ def exec_explain(cur, env):
     res = cur.fetchall()
     for line in res:
         print(line[0])
+    print('\nFetched {0} rows'.format(len(res)))
 
     cur.close()
 
@@ -91,15 +106,11 @@ def exec_script(cur):
     pass
 
 
-
-
 def main():
     env = sys.argv[1]
     conn_str = sys.argv[2]
     query = sys.argv[3]
     qtype = sys.argv[4]  # query , script, explain
-    print(qtype)
-    print(env)
 
     exec_module = None
     if env == 'oracle':
@@ -121,9 +132,8 @@ def main():
             exec_script(cur)
 
     except Exception as e:
-        print(str(e) + '\n')
+        print(str(e) + '\n',file=sys.stdout)
         exit(1)
-
 
     db.close()
     exit(0)

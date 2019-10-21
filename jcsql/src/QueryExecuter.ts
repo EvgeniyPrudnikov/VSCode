@@ -7,9 +7,10 @@ import * as cp from 'child_process';
 
 
 
+
 interface IQuery {
 
-    qyeryText: string;
+    queryText: string;
     queryType: string;
 }
 
@@ -17,29 +18,31 @@ class QueryParser {
 
     public query: IQuery;
 
-    constructor(queryRawText: string, queryType?: string) {
-        this.query = this.parse(queryRawText, queryType);
+    constructor(env: string, queryRawText: string, queryType?: string) {
+        this.query = this.parse(env, queryRawText, queryType);
     }
 
 
-    private parse(s: string, queryType?: string): IQuery {
+    private parse(env: string, s: string, queryType?: string): IQuery {
         let q: IQuery;
 
-        if (queryType) {
-            q = { qyeryText: s.trim(), queryType: queryType };
+        if (queryType === 'explain') {
+            if (env === 'oracle') {
+                q = { queryText: 'EXPLAIN PLAN FOR ' + s.trim(), queryType: queryType };
+            } else {
+                q = { queryText: 'EXPLAIN ' + s.trim(), queryType: queryType };
+            }
             return q;
         }
 
         if (s.trim().startsWith('select') || s.trim().startsWith('with')) {
-            q = { qyeryText: s.trim(), queryType: 'query' };
+            q = { queryText: s.trim(), queryType: 'query' };
         } else {
-            q = { qyeryText: s.trim(), queryType: 'script' };
+            q = { queryText: s.trim(), queryType: 'script' };
         }
 
         return q;
     }
-
-
 }
 
 interface IData {
@@ -65,7 +68,7 @@ class Executer {
 
         let pythonPath = String(vscode.workspace.getConfiguration('python', null).get('pythonPath'));
 
-        this.executer = cp.spawn(pythonPath, ['-u', '-i', this.getClientPath(extensionPath), conn.connEnv, this.connString, this.query.qyeryText, this.query.queryType]);
+        this.executer = cp.spawn(pythonPath, ['-u', '-i', this.getClientPath(extensionPath), conn.connEnv, this.connString, this.query.queryText, this.query.queryType]);
         this.executer.stdin.setDefaultEncoding('utf-8');
 
         this.executer.stdout.on('data', (data: Buffer) => {
@@ -75,10 +78,19 @@ class Executer {
 
         this.executer.stderr.on('data', (data: Buffer) => {
             let dataStr = data.toString();
+            console.log(dataStr)
             if (dataStr.includes('SystemExit: 0')) {
                 this.executer.kill();
             }
         });
+
+    //     this.executer.on('close', (code) => {
+    //         console.log(`child process close all stdio with code ${code}`);
+    //     });
+
+    //     this.executer.on('exit', (code) => {
+    //         console.log(`child process exited with code ${code}`);
+    //     });
     }
 
     private getConnStr(conn: ConnValue) {
@@ -148,10 +160,6 @@ class Visualizer {
                 }, 200);
             }
         });
-<<<<<<< HEAD
-
-=======
->>>>>>> 844f2cb70f776bd2871f321c7530b15b9fcd24f1
         return viz;
     }
 
@@ -214,17 +222,16 @@ export default class QueryExecuter {
 
     public async RunQuery() {
 
-<<<<<<< HEAD
         // let query: IQuery = new QueryParser(this.queryRawText).query;
-        let query: IQuery = { qyeryText:'EXPLAIN PLAN FOR select * from dual', queryType:'explain'};
+        let query: IQuery = { queryText: 'select * from lool__1 where rownum <= 200 order by id', queryType: 'query' };
 
-=======
-        let query: Query = { qyeryText: "select * from lool__1 where rownum <= 200 order by id", queryType: 'query' };
->>>>>>> 844f2cb70f776bd2871f321c7530b15b9fcd24f1
         let exec = new Executer(this.extensionPath, this.usedConnection, query);
         let visualizer = await Visualizer.Create();
 
+        await visualizer.show(query.queryText);
+
         let pop = await exec.getData();
+        pop = query.queryText + '\n\n' + pop;
         await visualizer.show(pop);
 
         visualizer.loadData.on(async function display(msg) {
@@ -235,6 +242,7 @@ export default class QueryExecuter {
                     return;
                 }
                 let pop = await exec.getData();
+                pop = query.queryText + '\n\n' + pop;
                 await visualizer.show(pop);
             } catch (err) {
                 console.log(err);
