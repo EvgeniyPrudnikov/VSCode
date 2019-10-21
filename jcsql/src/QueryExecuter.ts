@@ -81,6 +81,7 @@ class Executer {
             console.log(dataStr)
             if (dataStr.includes('SystemExit: 0')) {
                 this.executer.kill();
+                this.data = { data: '', state: 'old' };
             }
         });
 
