@@ -6,7 +6,8 @@ import { TypedEvent } from './TypedEvent';
 import * as cp from 'child_process';
 
 
-interface Query {
+
+interface IQuery {
 
     qyeryText: string;
     queryType: string;
@@ -14,17 +15,34 @@ interface Query {
 
 class QueryParser {
 
-    private queryRawText: string;
-    private queryType: string;
-
+    public query: IQuery;
 
     constructor(queryRawText: string, queryType?: string) {
-        this.queryRawText = queryRawText;
-        this.queryType = '';
+        this.query = this.parse(queryRawText, queryType);
     }
+
+
+    private parse(s: string, queryType?: string): IQuery {
+        let q: IQuery;
+
+        if (queryType) {
+            q = { qyeryText: s.trim(), queryType: queryType };
+            return q;
+        }
+
+        if (s.trim().startsWith('select') || s.trim().startsWith('with')) {
+            q = { qyeryText: s.trim(), queryType: 'query' };
+        } else {
+            q = { qyeryText: s.trim(), queryType: 'script' };
+        }
+
+        return q;
+    }
+
+
 }
 
-interface Data {
+interface IData {
     data: string;
     state: string & 'new' | 'old';
 }
@@ -35,12 +53,12 @@ class Executer {
     private resource = 'resources';
     private pyResources = 'pyResources';
     private connString: string;
-    private query: Query;
+    private query: IQuery;
     private executer: cp.ChildProcess;
-    private data: Data = { data: '', state: 'new' };
+    private data: IData = { data: '', state: 'new' };
 
 
-    constructor(extensionPath: string, conn: ConnValue, query: Query) {
+    constructor(extensionPath: string, conn: ConnValue, query: IQuery) {
 
         this.query = query;
         this.connString = this.getConnStr(conn);
@@ -126,12 +144,6 @@ class Visualizer {
             }
         });
 
-        vscode.window.onDidChangeActiveTextEditor((event) => {
-            if (event === viz.textEditorInstance) {
-                // nothing
-            }
-        });
-
         return viz;
     }
 
@@ -194,7 +206,9 @@ export default class QueryExecuter {
 
     public async RunQuery() {
 
-        let query: Query = { qyeryText: "select * from lool__1 where rownum < 1000 order by id", queryType: 'query' };
+        // let query: IQuery = new QueryParser(this.queryRawText).query;
+        let query: IQuery = { qyeryText:'EXPLAIN PLAN FOR select * from dual', queryType:'explain'};
+
         let exec = new Executer(this.extensionPath, this.usedConnection, query);
         let visualizer = await Visualizer.Create();
 

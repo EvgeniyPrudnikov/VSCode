@@ -18,7 +18,7 @@ def connect_to_db(conn_str):
     return db
 
 
-def execute_query(db, query_text, qtype):
+def execute_query(db, query_text):
 
     cur = db.cursor()
     try:

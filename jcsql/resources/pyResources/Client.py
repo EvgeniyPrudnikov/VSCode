@@ -19,7 +19,7 @@ def pretty_print_result(output):
         if row_index == 0 or (row_index == len(l_output) - 1):
             print('+' + ''.join(['-' * x + '--+' for x in max_col_length]))
 
-    print('Fetched {0} rows\n'.format(len(output) - 1))
+    print('\nFetched {0} rows\n'.format(len(output) - 1))
 
 
 def fetch_data(cur, res, fetch_num=100, with_header=False):
@@ -38,37 +38,16 @@ def fetch_data(cur, res, fetch_num=100, with_header=False):
     return len(result)
 
 
-def main():
-    evn = sys.argv[1]
-    conn_str = sys.argv[2]
-    query = sys.argv[3]
-    qtype = sys.argv[4]
-
+def exec_query(cur):
     result = []
-    exec_module = None
-    if evn == 'oracle':
-        import oracle as exec_module
-    elif evn == 'impala':
-        import impala as exec_module
-    else:
-        raise Exception('Wrong environment')
 
-    try:
-        db = exec_module.connect_to_db(conn_str)
-        cur = exec_module.execute_query(db, query, qtype)
-        rows_cnt = fetch_data(cur, result, with_header=True)
+    rows_cnt = fetch_data(cur, result, with_header=True)
 
-        pretty_print_result(result)
+    pretty_print_result(result)
 
-        if rows_cnt < 0:
-            cur.close()
-            db.close()
-            exit(0)
-
-    except Exception as e:
-        print(str(e) + '\n')
-        exit(1)
-
+    if rows_cnt < 0:
+        cur.close()
+        exit(0)
 
     # default timeout 1 min
     timeout = time.time() + 60
@@ -93,9 +72,61 @@ def main():
         except Exception as e:
             print(e)
             break
+    cur.close()
+    exit(0)
+
+
+def exec_explain(cur, env):
+    if env == 'oracle':
+        exp_query = 'SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY)'
+        cur.execute(exp_query)
+    res = cur.fetchall()
+    for line in res:
+        print(line[0])
 
     cur.close()
+
+
+def exec_script(cur):
+    pass
+
+
+
+
+def main():
+    env = sys.argv[1]
+    conn_str = sys.argv[2]
+    query = sys.argv[3]
+    qtype = sys.argv[4]  # query , script, explain
+    print(qtype)
+    print(env)
+
+    exec_module = None
+    if env == 'oracle':
+        import oracle as exec_module
+    elif env == 'impala':
+        import impala as exec_module
+    else:
+        raise Exception('Wrong environment')
+
+    try:
+        db = exec_module.connect_to_db(conn_str)
+        cur = exec_module.execute_query(db, query)
+
+        if qtype == 'query':
+            exec_query(cur)
+        elif qtype == 'explain':
+            exec_explain(cur, env)
+        elif qtype == 'script':
+            exec_script(cur)
+
+    except Exception as e:
+        print(str(e) + '\n')
+        exit(1)
+
+
     db.close()
+    exit(0)
 
 
 if __name__ == '__main__':
