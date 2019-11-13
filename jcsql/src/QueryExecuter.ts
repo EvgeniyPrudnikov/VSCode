@@ -59,6 +59,7 @@ class Executer {
     private query: IQuery;
     private executer: cp.ChildProcess;
     private data: IData = { data: '', state: 'new' };
+    private exitCode: number = -1;
 
 
     constructor(extensionPath: string, conn: ConnValue, query: IQuery) {
@@ -76,22 +77,10 @@ class Executer {
             this.data.data += data.toString();
         });
 
-        this.executer.stderr.on('data', (data: Buffer) => {
-            let dataStr = data.toString();
-            console.log(dataStr)
-            if (dataStr.includes('SystemExit:')) {
-                this.executer.kill();
-                this.data = { data: '', state: 'old' };
-            }
+        this.executer.on('close', (code) => {
+            console.log(`child process closed with code ${code}`);
+            this.exitCode = code;
         });
-
-    //     this.executer.on('close', (code) => {
-    //         console.log(`child process close all stdio with code ${code}`);
-    //     });
-
-    //     this.executer.on('exit', (code) => {
-    //         console.log(`child process exited with code ${code}`);
-    //     });
     }
 
     private getConnStr(conn: ConnValue) {
@@ -106,12 +95,11 @@ class Executer {
         // clear data before get more
         this.data = { data: '', state: 'old' };
 
-        if (!this.executer.killed) {
-            this.executer.stdin.write(msg + '\n');
-            return true;
+        if (this.exitCode >= 0) { // process finished
+            return false;
         }
-
-        return false;
+        this.executer.stdin.write(msg + '\n');
+        return true;
     }
 
     public getData() {
@@ -224,7 +212,7 @@ export default class QueryExecuter {
     public async RunQuery() {
 
         // let query: IQuery = new QueryParser(this.queryRawText).query;
-        let query: IQuery = { queryText: 'select * from lool__1 where rownum <= 200 order by id', queryType: 'query' };
+        let query: IQuery = { queryText: 'select * from lool__1 where rownum <= 1000 order by id', queryType: 'query' };
 
         let exec = new Executer(this.extensionPath, this.usedConnection, query);
         let visualizer = await Visualizer.Create();
@@ -249,6 +237,5 @@ export default class QueryExecuter {
                 console.log(err);
             }
         });
-
     }
 }

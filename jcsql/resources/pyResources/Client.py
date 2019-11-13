@@ -49,16 +49,15 @@ def exec_query(cur):
 
     if rows_cnt < 0:
         cur.close()
-        exit(0)
+        os._exit(0)
 
     # default timeout 1 min
-    timeout = time.time() + 5
+    timeout = time.time() + 10
 
     input_msgs = Queue()
     input_t = threading.Thread(target=lambda msg_q: msg_q.put(sys.stdin.readline()), args=(input_msgs,))
     input_t.daemon = True
     input_t.start()
-
 
     while time.time() < timeout:
         try:
@@ -87,7 +86,6 @@ def exec_query(cur):
         except Exception as e:
             raise Exception(str(e))
     cur.close()
-
 
 
 def exec_explain(cur, env):
@@ -132,11 +130,13 @@ def main():
             exec_script(cur)
 
     except Exception as e:
-        print(str(e) + '\n',file=sys.stdout)
-        exit(1)
+        e_msg = str(e) + '\n'
+        print(e_msg)
+        print('Fetched {0} rows'.format(len(e_msg.split('\n')) - 1))
+        os._exit(1)
 
     db.close()
-    exit(0)
+    os._exit(0)
 
 
 if __name__ == '__main__':

@@ -77,8 +77,7 @@ class Connection {
                         let conval: ConnValue = this.fillConVal(message.text);
                         vscode.window.showInformationMessage('Saved');
                         this.isReady.emit(conval);
-                        this.sleep(500);
-                        this.dispose();
+                        setTimeout(() => { this.dispose(); }, 500);
                         return;
                 }
             },
@@ -96,11 +95,6 @@ class Connection {
                 x.dispose();
             }
         }
-    }
-
-    private sleep(delay: number) {
-        var start = new Date().getTime();
-        while (new Date().getTime() < start + delay) { }
     }
 
     private update() {
