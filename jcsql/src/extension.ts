@@ -38,6 +38,19 @@ export function activate(context: vscode.ExtensionContext) {
             }
         })
     );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('extension.explainPlan', async () => {
+            // The code you place here will be executed every time your command is executed
+            const connections: Array<string> = connStore.getAllConnectionNames();
+            const value = await vscode.window.showQuickPick(connections, { placeHolder: 'Select the connection for explain plan' });
+            if (value) {
+                let conn = connStore.getConnection(value);
+                let exec = new QueryExecuter(conn, context.extensionPath, 'explain');
+                exec.RunQuery();
+            }
+        })
+    );
 }
 
 // this method is called when your extension is deactivated

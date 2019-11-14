@@ -25,20 +25,21 @@ class QueryParser {
 
     private parse(env: string, s: string, queryType?: string): IQuery {
         let q: IQuery;
+        let ls = s.trim();
 
         if (queryType === 'explain') {
             if (env === 'oracle') {
-                q = { queryText: 'EXPLAIN PLAN FOR ' + s.trim(), queryType: queryType };
+                q = { queryText: 'EXPLAIN PLAN FOR\n' + ls, queryType: queryType };
             } else {
-                q = { queryText: 'EXPLAIN ' + s.trim(), queryType: queryType };
+                q = { queryText: 'EXPLAIN\n' + ls, queryType: queryType };
             }
             return q;
         }
 
-        if (s.trim().startsWith('select') || s.trim().startsWith('with')) {
-            q = { queryText: s.trim(), queryType: 'query' };
+        if (ls.toLowerCase().startsWith('select') || ls.toLowerCase().startsWith('with')) {
+            q = { queryText: ls, queryType: 'query' };
         } else {
-            q = { queryText: s.trim(), queryType: 'script' };
+            q = { queryText: ls, queryType: 'script' };
         }
 
         return q;
@@ -179,15 +180,22 @@ class Visualizer {
 
         let textRange = new vscode.Range(0, 0, lastline().range.end.line, lastline().range.end.character);
 
-        await this.switch('down');
         await this.textEditorInstance.edit(edit => {
             edit.delete(textRange);
             edit.insert(new vscode.Position(0, 0), resultText);
         });
 
         this.lastLineNum = lastline().lineNumber;
-        await this.switch('restore');
         this.isReady = true;
+    }
+
+    public async append(resultText: string) {
+
+        await this.textEditorInstance.edit(edit => {
+            edit.insert(new vscode.Position(this.lastLineNum, 0), resultText);
+        });
+
+        this.lastLineNum = this.textEditorInstance.document.lineAt(this.textEditorInstance.document.lineCount - 1).lineNumber;
     }
 }
 
@@ -195,9 +203,10 @@ export default class QueryExecuter {
 
     private usedConnection: ConnValue;
     private queryRawText: string = '';
+    private queryType: string = '';
     private extensionPath: string;
 
-    constructor(connection: ConnValue, extensionPath: string) {
+    constructor(connection: ConnValue, extensionPath: string, qType?:string) {
         this.usedConnection = connection;
         this.extensionPath = extensionPath;
         let editor = vscode.window.activeTextEditor;
@@ -206,18 +215,23 @@ export default class QueryExecuter {
             let selection = editor.selection;
             this.queryRawText = document.getText(selection);
         }
+        if (qType) {
+            this.queryType = qType;
+        }
     }
 
 
     public async RunQuery() {
 
-        // let query: IQuery = new QueryParser(this.queryRawText).query;
-        let query: IQuery = { queryText: 'select * from lool__1 where rownum <= 1000 order by id', queryType: 'query' };
+        if (!this.queryRawText.trim()) {
+            return;
+        }
 
+        let query: IQuery = new QueryParser(this.usedConnection.connEnv, this.queryRawText, this.queryType).query;
         let exec = new Executer(this.extensionPath, this.usedConnection, query);
         let visualizer = await Visualizer.Create();
 
-        await visualizer.show(query.queryText);
+        await visualizer.show('\n' + query.queryText + '\n');
 
         let pop = await exec.getData();
         pop = query.queryText + '\n\n' + pop;
@@ -227,6 +241,7 @@ export default class QueryExecuter {
             try {
                 let connected = exec.fethData(msg);
                 if (!connected) {
+                    await visualizer.append('Done.');
                     visualizer.loadData.off(display);
                     return;
                 }

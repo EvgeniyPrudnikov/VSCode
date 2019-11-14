@@ -51,11 +51,10 @@ def exec_query(cur):
         cur.close()
         os._exit(0)
 
-    # default timeout 1 min
-    timeout = time.time() + 10
+    # default timeout 30 sec
+    timeout = time.time() + 30
 
     input_msgs = Queue()
-
     def read_input(msg_q):
         while True: msg_q.put(sys.stdin.readline())
 

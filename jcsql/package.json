@@ -13,7 +13,8 @@
         "onCommand:extension.addConnection",
         "onCommand:extension.deleteConnection",
         "onCommand:extension.showConnections",
-        "onCommand:extension.runCode"
+        "onCommand:extension.runCode",
+        "onCommand:extension.explainPlan"
     ],
     "main": "./out/extension.js",
     "contributes": {
@@ -36,6 +37,11 @@
             {
                 "command": "extension.runCode",
                 "title": "Run Code",
+                "category": "JCSQL"
+            },
+            {
+                "command": "extension.explainPlan",
+                "title": "Explain Plan",
                 "category": "JCSQL"
             }
         ]
