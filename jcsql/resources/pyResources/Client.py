@@ -55,7 +55,11 @@ def exec_query(cur):
     timeout = time.time() + 10
 
     input_msgs = Queue()
-    input_t = threading.Thread(target=lambda msg_q: msg_q.put(sys.stdin.readline()), args=(input_msgs,))
+
+    def read_input(msg_q):
+        while True: msg_q.put(sys.stdin.readline())
+
+    input_t = threading.Thread(target=read_input, args=(input_msgs,))
     input_t.daemon = True
     input_t.start()
 
@@ -65,7 +69,6 @@ def exec_query(cur):
             >> load:100
             >> exit:0
             '''
-
             if input_msgs.empty():
                 time.sleep(0.2)
                 continue
