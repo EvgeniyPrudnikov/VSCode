@@ -1,6 +1,6 @@
 
 import * as vscode from 'vscode';
-import ConnectionStore from './ConnectionStore';
+import ConnectionStore, { ConnValue } from './ConnectionStore';
 import QueryExecuter from './QueryExecuter';
 
 // this method is called when your extension is activated
@@ -28,13 +28,30 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand('extension.runCode', async () => {
-            // The code you place here will be executed every time your command is executed
-            const connections: Array<string> = connStore.getAllConnectionNames();
-            const value = await vscode.window.showQuickPick(connections, { placeHolder: 'Select the connection to run code' });
-            if (value) {
-                const conn = connStore.getConnection(value);
+            const conn = connStore.getLastUsedConnection();
+            if (conn) {
+                vscode.commands.executeCommand('extension.runCodeIn', conn);
+            } else {
+                vscode.commands.executeCommand('extension.runCodeIn');
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('extension.runCodeIn', async (conn?: ConnValue) => {
+            if (conn) {
                 const exec = new QueryExecuter(conn, context.extensionPath);
                 exec.RunQuery();
+            }
+            else {
+                const connectionNames: Array<string> = connStore.getAllConnectionNames();
+                const connectionName = await vscode.window.showQuickPick(connectionNames, { placeHolder: 'Select the connection to run code' });
+                if (connectionName) {
+                    const conn = connStore.getConnection(connectionName);
+                    connStore.updateLastUsedConnection(conn);
+                    const exec = new QueryExecuter(conn, context.extensionPath);
+                    exec.RunQuery();
+                }
             }
         })
     );

@@ -139,7 +139,7 @@ export default class ConnectionStore {
     private pathFile: string;
     private static instance: ConnectionStore;
     private connectionStore: Map<string, ConnValue>;
-    public static lastUsedConnection: ConnValue;
+    private lastUsedConnection: ConnValue | undefined;
 
     private constructor(extensionPath: string) {
         this.extensionPath = extensionPath;
@@ -203,5 +203,13 @@ export default class ConnectionStore {
 
     public getAllConnectionNames(): Array<string> {
         return Array.from(this.connectionStore.keys());
+    }
+
+    public updateLastUsedConnection(conn: ConnValue) {
+        this.lastUsedConnection = conn;
+    }
+
+    public getLastUsedConnection() {
+        return this.lastUsedConnection;
     }
 }

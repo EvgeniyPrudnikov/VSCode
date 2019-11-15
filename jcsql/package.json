@@ -14,6 +14,7 @@
         "onCommand:extension.deleteConnection",
         "onCommand:extension.showConnections",
         "onCommand:extension.runCode",
+        "extension.runCodeIn",
         "onCommand:extension.explainPlan"
     ],
     "main": "./out/extension.js",
@@ -37,6 +38,11 @@
             {
                 "command": "extension.runCode",
                 "title": "Run Code",
+                "category": "JCSQL"
+            },
+            {
+                "command": "extension.runCodeIn",
+                "title": "Run Code In",
                 "category": "JCSQL"
             },
             {
