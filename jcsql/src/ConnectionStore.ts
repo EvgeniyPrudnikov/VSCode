@@ -107,7 +107,7 @@ class Connection {
         const styleUri = this.panel.webview.asWebviewUri(stylePathOnDisk);
 
         var html: string = '';
-        let nonce = this.getNonce();
+        const nonce = this.getNonce();
         html = fs.readFileSync(htmlPathOnDisk.toString()).toString();
         html = html.replace('${scriptUri}', scriptUri.toString()).replace(/\${nonce}/g, nonce).replace('${styleUri}', styleUri.toString());
         this.panel.webview.html = html;
@@ -123,7 +123,7 @@ class Connection {
     }
 
     private fillConVal(propString: string): ConnValue {
-        let propsArray = propString.split('|');
+        const propsArray = propString.split('|');
         return new ConnValue(propsArray[0], propsArray[1], propsArray[2], propsArray[3], propsArray[4]);
     }
 }
@@ -132,9 +132,9 @@ class Connection {
 export default class ConnectionStore {
 
     private extensionPath: string;
-    private passFileName: string = 'pass';
-    private resource = 'resources';
-    private passResources = 'passResources';
+    private readonly passFileName: string = 'pass';
+    private readonly resource = 'resources';
+    private readonly passResources = 'passResources';
 
     private pathFile: string;
     private static instance: ConnectionStore;
@@ -162,7 +162,7 @@ export default class ConnectionStore {
     }
 
     private loadConnections(pathFile: string) {
-        let data = fs.readFileSync(pathFile);
+        const data = fs.readFileSync(pathFile);
         if (data.toString()) {
             return new Map<string, ConnValue>(JSON.parse(data.toString()));
         }
@@ -174,7 +174,7 @@ export default class ConnectionStore {
     }
 
     public addConnection() {
-        let con = new Connection(this.extensionPath);
+        const con = new Connection(this.extensionPath);
         con.isReady.once((conval) => {
             try {
                 if (conval.connName) {

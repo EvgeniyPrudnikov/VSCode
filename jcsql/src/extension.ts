@@ -7,7 +7,7 @@ import QueryExecuter from './QueryExecuter';
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
 
-    let connStore = ConnectionStore.getInstance(context.extensionPath);
+    const connStore = ConnectionStore.getInstance(context.extensionPath);
 
     context.subscriptions.push(
         vscode.commands.registerCommand('extension.addConnection', () => {
@@ -32,8 +32,8 @@ export function activate(context: vscode.ExtensionContext) {
             const connections: Array<string> = connStore.getAllConnectionNames();
             const value = await vscode.window.showQuickPick(connections, { placeHolder: 'Select the connection to run code' });
             if (value) {
-                let conn = connStore.getConnection(value);
-                let exec = new QueryExecuter(conn, context.extensionPath);
+                const conn = connStore.getConnection(value);
+                const exec = new QueryExecuter(conn, context.extensionPath);
                 exec.RunQuery();
             }
         })
@@ -45,8 +45,8 @@ export function activate(context: vscode.ExtensionContext) {
             const connections: Array<string> = connStore.getAllConnectionNames();
             const value = await vscode.window.showQuickPick(connections, { placeHolder: 'Select the connection for explain plan' });
             if (value) {
-                let conn = connStore.getConnection(value);
-                let exec = new QueryExecuter(conn, context.extensionPath, 'explain');
+                const conn = connStore.getConnection(value);
+                const exec = new QueryExecuter(conn, context.extensionPath, 'explain');
                 exec.RunQuery();
             }
         })

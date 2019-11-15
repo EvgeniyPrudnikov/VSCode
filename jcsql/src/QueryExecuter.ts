@@ -29,7 +29,7 @@ class QueryParser {
 
     private parse(env: string, s: string, queryType?: string): IQuery {
         let q: IQuery;
-        let ls = s.trim();
+        const ls = s.trim();
 
         if (queryType === 'explain') {
             if (env === 'oracle') {
@@ -57,9 +57,9 @@ interface IData {
 
 class Executer {
 
-    private clientName: string = 'Client.py';
-    private resource: string = 'resources';
-    private pyResources: string = 'pyResources';
+    private readonly clientName: string = 'Client.py';
+    private readonly resource: string = 'resources';
+    private readonly pyResources: string = 'pyResources';
     private connString: string;
     private query: IQuery;
     private executer: cp.ChildProcess;
@@ -72,7 +72,7 @@ class Executer {
         this.query = query;
         this.connString = this.getConnStr(conn);
 
-        let pythonPath = String(vscode.workspace.getConfiguration('python', null).get('pythonPath'));
+        const pythonPath = String(vscode.workspace.getConfiguration('python', null).get('pythonPath'));
 
         this.executer = cp.spawn(pythonPath, ['-u', '-i', this.getClientPath(extensionPath), conn.connEnv, this.connString, this.query.queryText, this.query.queryType]);
         this.executer.stdin.setDefaultEncoding('utf-8');
@@ -109,8 +109,8 @@ class Executer {
 
     public getData() {
         // wait for data arive
-        let obj = this;
-        let promise = new Promise<string>(function (resolve) {
+        const obj = this;
+        const promise = new Promise<string>(function (resolve) {
             setTimeout(function waitData(lData) {
                 if (lData.data.includes('Fetched') && lData.state === 'new') {
                     resolve(lData.data);
@@ -135,16 +135,16 @@ class Visualizer {
 
     public static Create = async () => {
         const viz = new Visualizer();
-        let doc = await vscode.workspace.openTextDocument();
+        const doc = await vscode.workspace.openTextDocument();
         await viz.switch('down');
-        let show = await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two & vscode.ViewColumn.Beside, false);
+        const show = await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two & vscode.ViewColumn.Beside, false);
         await viz.switch('restore');
         viz.textEditorInstance = show;
 
         vscode.window.onDidChangeTextEditorVisibleRanges((event) => {
             if (event.textEditor.document === viz.textEditorInstance.document) {
-                let lastVisibleLineNum = event.visibleRanges[0].end.line;
-                let isClosed = event.textEditor.document.isClosed;
+                const lastVisibleLineNum = event.visibleRanges[0].end.line;
+                const isClosed = event.textEditor.document.isClosed;
 
                 setTimeout(() => {
                     if ((lastVisibleLineNum > 0) && (viz.lastLineNum === lastVisibleLineNum) && !isClosed && viz.isReady) {
@@ -158,8 +158,8 @@ class Visualizer {
     }
 
     private async switch(dir: string & 'down' | 'restore') {
-        let workbenchConfig = vscode.workspace.getConfiguration('workbench.editor');
-        let openSideBySideDirection = workbenchConfig.get('openSideBySideDirection');
+        const workbenchConfig = vscode.workspace.getConfiguration('workbench.editor');
+        const openSideBySideDirection = workbenchConfig.get('openSideBySideDirection');
 
         switch (dir) {
             case 'down':
@@ -177,12 +177,12 @@ class Visualizer {
 
     public async show(resultText: string) {
 
-        let lastline = () => {
+        const lastline = () => {
             return this.textEditorInstance.document.lineAt(
                 this.textEditorInstance.document.lineCount - 1);
         };
 
-        let textRange = new vscode.Range(0, 0, lastline().range.end.line, lastline().range.end.character);
+        const textRange = new vscode.Range(0, 0, lastline().range.end.line, lastline().range.end.character);
 
         await this.textEditorInstance.edit(edit => {
             edit.delete(textRange);
@@ -214,10 +214,17 @@ export default class QueryExecuter {
     constructor(connection: ConnValue, extensionPath: string, qType?:string) {
         this.usedConnection = connection;
         this.extensionPath = extensionPath;
-        let editor = vscode.window.activeTextEditor;
+        const editor = vscode.window.activeTextEditor;
         if (editor) {
-            let document = editor.document;
+            const document = editor.document;
             let selection = editor.selection;
+            if (selection.isEmpty) {
+                const currLine = editor.selection.active.line;
+                const stratPos = new vscode.Position(currLine, 0);
+                const endPos = document.lineAt(currLine).range.end;
+                selection = new vscode.Selection(stratPos, endPos);
+                editor.selection = selection;
+            }
             this.queryRawText = document.getText(selection);
         }
         if (qType) {
@@ -232,9 +239,9 @@ export default class QueryExecuter {
             return;
         }
 
-        let query: IQuery = new QueryParser(this.usedConnection.connEnv, this.queryRawText, this.queryType).getQuery();
-        let exec: Executer = new Executer(this.extensionPath, this.usedConnection, query);
-        let visualizer: Visualizer = await Visualizer.Create();
+        const query: IQuery = new QueryParser(this.usedConnection.connEnv, this.queryRawText, this.queryType).getQuery();
+        const exec: Executer = new Executer(this.extensionPath, this.usedConnection, query);
+        const visualizer: Visualizer = await Visualizer.Create();
 
         visualizer.show('\n' + query.queryText + '\n');
 
