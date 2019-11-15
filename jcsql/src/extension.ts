@@ -29,11 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('extension.runCode', async () => {
             const conn = connStore.getLastUsedConnection();
-            if (conn) {
-                vscode.commands.executeCommand('extension.runCodeIn', conn);
-            } else {
-                vscode.commands.executeCommand('extension.runCodeIn');
-            }
+            vscode.commands.executeCommand('extension.runCodeIn', conn);
         })
     );
 
