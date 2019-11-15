@@ -16,7 +16,11 @@ interface IQuery {
 
 class QueryParser {
 
-    public query: IQuery;
+    private query: IQuery;
+
+    public getQuery() {
+        return this.query;
+    }
 
     constructor(env: string, queryRawText: string, queryType?: string) {
         this.query = this.parse(env, queryRawText, queryType);
@@ -54,8 +58,8 @@ interface IData {
 class Executer {
 
     private clientName: string = 'Client.py';
-    private resource = 'resources';
-    private pyResources = 'pyResources';
+    private resource: string = 'resources';
+    private pyResources: string = 'pyResources';
     private connString: string;
     private query: IQuery;
     private executer: cp.ChildProcess;
@@ -196,6 +200,7 @@ class Visualizer {
         });
 
         this.lastLineNum = this.textEditorInstance.document.lineAt(this.textEditorInstance.document.lineCount - 1).lineNumber;
+        this.isReady = true;
     }
 }
 
@@ -227,15 +232,15 @@ export default class QueryExecuter {
             return;
         }
 
-        let query: IQuery = new QueryParser(this.usedConnection.connEnv, this.queryRawText, this.queryType).query;
-        let exec = new Executer(this.extensionPath, this.usedConnection, query);
-        let visualizer = await Visualizer.Create();
+        let query: IQuery = new QueryParser(this.usedConnection.connEnv, this.queryRawText, this.queryType).getQuery();
+        let exec: Executer = new Executer(this.extensionPath, this.usedConnection, query);
+        let visualizer: Visualizer = await Visualizer.Create();
 
-        await visualizer.show('\n' + query.queryText + '\n');
+        visualizer.show('\n' + query.queryText + '\n');
 
         let pop = await exec.getData();
         pop = query.queryText + '\n\n' + pop;
-        await visualizer.show(pop);
+        visualizer.show(pop);
 
         visualizer.loadData.on(async function display(msg) {
             try {
@@ -247,7 +252,7 @@ export default class QueryExecuter {
                 }
                 let pop = await exec.getData();
                 pop = query.queryText + '\n\n' + pop;
-                await visualizer.show(pop);
+                visualizer.show(pop);
             } catch (err) {
                 console.log(err);
             }
