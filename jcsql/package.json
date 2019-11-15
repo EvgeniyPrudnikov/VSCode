@@ -50,6 +50,20 @@
                 "title": "Explain Plan",
                 "category": "JCSQL"
             }
+        ],
+        "keybindings": [
+            {
+                "command": "extension.runCode",
+                "key": "ctrl+enter"
+            },
+            {
+                "command": "extension.runCodeIn",
+                "key": "ctrl+shift+enter"
+            },
+            {
+                "command": "extension.explainPlan",
+                "key": "f10"
+            }
         ]
     },
     "scripts": {

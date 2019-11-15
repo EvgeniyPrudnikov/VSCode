@@ -3,8 +3,7 @@ import * as vscode from 'vscode';
 import ConnectionStore, { ConnValue } from './ConnectionStore';
 import QueryExecuter from './QueryExecuter';
 
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
+
 export function activate(context: vscode.ExtensionContext) {
 
     const connStore = ConnectionStore.getInstance(context.extensionPath);
@@ -54,7 +53,6 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand('extension.explainPlan', async () => {
-            // The code you place here will be executed every time your command is executed
             const connections: Array<string> = connStore.getAllConnectionNames();
             const value = await vscode.window.showQuickPick(connections, { placeHolder: 'Select the connection for explain plan' });
             if (value) {
@@ -66,5 +64,4 @@ export function activate(context: vscode.ExtensionContext) {
     );
 }
 
-// this method is called when your extension is deactivated
 export function deactivate() { }

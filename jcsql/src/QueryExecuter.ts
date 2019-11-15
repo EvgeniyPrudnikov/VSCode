@@ -125,7 +125,7 @@ class Executer {
 
 class Visualizer {
 
-    private textEditorInstance!: vscode.TextEditor;
+    private textDocInstance!: vscode.TextDocument;
     private openSideBySideDirectionInit: any | undefined;
     public loadData: TypedEvent<string> = new TypedEvent<string>();
     private lastLineNum: number = 0;
@@ -137,17 +137,33 @@ class Visualizer {
         const viz = new Visualizer();
         const doc = await vscode.workspace.openTextDocument();
         await viz.switch('down');
-        const show = await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two & vscode.ViewColumn.Beside, false);
+        await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two & vscode.ViewColumn.Beside, false);
         await viz.switch('restore');
-        viz.textEditorInstance = show;
+        viz.textDocInstance = doc;
+
+        vscode.window.onDidChangeActiveTextEditor((event) => {
+            if (event) {
+                console.log('onDidChangeActiveTextEditor for ' + event.document.uri.path)
+            }
+
+        });
 
         vscode.window.onDidChangeTextEditorVisibleRanges((event) => {
-            if (event.textEditor.document === viz.textEditorInstance.document) {
+            if (event.textEditor.document === viz.textDocInstance) {
                 const lastVisibleLineNum = event.visibleRanges[0].end.line;
                 const isClosed = event.textEditor.document.isClosed;
 
+                console.log(
+                    'viz.textDocInstance.uri.path = ' + viz.textDocInstance.uri.path + ' ' +
+                    'lastVisibleLineNum = ' + lastVisibleLineNum + ' ' +
+                    'isClosed = ' + isClosed + ' ' +
+                    'viz.lastLineNum = ' + viz.lastLineNum + ' ' +
+                    'viz.isReady = ' + viz.isReady + ' '
+                )
+                console.log(event.visibleRanges)
                 setTimeout(() => {
                     if ((lastVisibleLineNum > 0) && (viz.lastLineNum === lastVisibleLineNum) && !isClosed && viz.isReady) {
+                        console.log(viz.textDocInstance.uri.path + ' event')
                         viz.loadData.emit('load:100');
                         viz.isReady = false;
                     }
@@ -170,6 +186,7 @@ class Visualizer {
             case 'restore':
                 if (this.openSideBySideDirectionInit === 'down') { return; }
                 await workbenchConfig.update('openSideBySideDirection', this.openSideBySideDirectionInit, vscode.ConfigurationTarget.Global);
+                break;
             default:
                 break;
         }
@@ -178,28 +195,28 @@ class Visualizer {
     public async show(resultText: string) {
 
         const lastline = () => {
-            return this.textEditorInstance.document.lineAt(
-                this.textEditorInstance.document.lineCount - 1);
+            return this.textDocInstance.lineAt(
+                this.textDocInstance.lineCount - 1);
         };
 
         const textRange = new vscode.Range(0, 0, lastline().range.end.line, lastline().range.end.character);
 
-        await this.textEditorInstance.edit(edit => {
-            edit.delete(textRange);
-            edit.insert(new vscode.Position(0, 0), resultText);
-        });
+        const edit = new vscode.WorkspaceEdit();
+        edit.delete(this.textDocInstance.uri, textRange);
+        edit.insert(this.textDocInstance.uri, new vscode.Position(0, 0), resultText);
+        await vscode.workspace.applyEdit(edit);
 
         this.lastLineNum = lastline().lineNumber;
         this.isReady = true;
     }
 
     public async append(resultText: string) {
+        const edit = new vscode.WorkspaceEdit();
 
-        await this.textEditorInstance.edit(edit => {
-            edit.insert(new vscode.Position(this.lastLineNum, 0), resultText);
-        });
+        edit.insert(this.textDocInstance.uri, new vscode.Position(this.lastLineNum, 0), resultText);
+        await vscode.workspace.applyEdit(edit);
 
-        this.lastLineNum = this.textEditorInstance.document.lineAt(this.textEditorInstance.document.lineCount - 1).lineNumber;
+        this.lastLineNum = this.textDocInstance.lineAt(this.textDocInstance.lineCount - 1).lineNumber;
         this.isReady = true;
     }
 }
@@ -211,7 +228,7 @@ export default class QueryExecuter {
     private queryType: string = '';
     private extensionPath: string;
 
-    constructor(connection: ConnValue, extensionPath: string, qType?:string) {
+    constructor(connection: ConnValue, extensionPath: string, qType?: string) {
         this.usedConnection = connection;
         this.extensionPath = extensionPath;
         const editor = vscode.window.activeTextEditor;
