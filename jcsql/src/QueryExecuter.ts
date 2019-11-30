@@ -141,29 +141,14 @@ class Visualizer {
         await viz.switch('restore');
         viz.textDocInstance = doc;
 
-        vscode.window.onDidChangeActiveTextEditor((event) => {
-            if (event) {
-                console.log('onDidChangeActiveTextEditor for ' + event.document.uri.path)
-            }
-
-        });
 
         vscode.window.onDidChangeTextEditorVisibleRanges((event) => {
             if (event.textEditor.document === viz.textDocInstance) {
-                const lastVisibleLineNum = event.visibleRanges[0].end.line;
+                const lastVisibleLineNum = event.visibleRanges[0].start.line;
                 const isClosed = event.textEditor.document.isClosed;
 
-                console.log(
-                    'viz.textDocInstance.uri.path = ' + viz.textDocInstance.uri.path + ' ' +
-                    'lastVisibleLineNum = ' + lastVisibleLineNum + ' ' +
-                    'isClosed = ' + isClosed + ' ' +
-                    'viz.lastLineNum = ' + viz.lastLineNum + ' ' +
-                    'viz.isReady = ' + viz.isReady + ' '
-                )
-                console.log(event.visibleRanges)
                 setTimeout(() => {
                     if ((lastVisibleLineNum > 0) && (viz.lastLineNum === lastVisibleLineNum) && !isClosed && viz.isReady) {
-                        console.log(viz.textDocInstance.uri.path + ' event')
                         viz.loadData.emit('load:100');
                         viz.isReady = false;
                     }
@@ -260,10 +245,12 @@ export default class QueryExecuter {
         const exec: Executer = new Executer(this.extensionPath, this.usedConnection, query);
         const visualizer: Visualizer = await Visualizer.Create();
 
-        visualizer.show('\n' + query.queryText + '\n');
+        if (query.queryType !== 'script') {
+            visualizer.show('\n' + query.queryText + '\n');
+        }
 
         let pop = await exec.getData();
-        pop = query.queryText + '\n\n' + pop;
+        pop = (query.queryType !== 'script' ? query.queryText + '\n\n' : '') + pop;
         visualizer.show(pop);
 
         visualizer.loadData.on(async function display(msg) {

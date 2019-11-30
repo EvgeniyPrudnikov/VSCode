@@ -6,15 +6,28 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Python: Current File",
+			"name": "Python: Script",
 			"type": "python",
 			"request": "launch",
 			"program": "${file}",
 			"console": "integratedTerminal",
 			"args": [
 				"oracle",
-				"DSN=oracle_odbc;UID=js;PWD=js",
-				"select * from lool__1 where rownum <= 200 order by id",
+				"DSN=js/js@oracle",
+				"\ndrop table lol1;\n create table lol1 ( x int, y varchar2(100));\nalter table lol1 add z number(10);begin    dbms_output.put_line('LOL'); end;\n/\nbegin\n    begin\n         dbms_output.put_line('LOL2');\n    end;\nend;\n/\n",
+				"script"
+			]
+		},
+		{
+			"name": "Python: Query",
+			"type": "python",
+			"request": "launch",
+			"program": "${file}",
+			"console": "integratedTerminal",
+			"args": [
+				"oracle",
+				"DSN=js/js@oracle",
+				"select * from lool__1 where rownum <= 500 order by id",
 				"query"
 			]
 		},

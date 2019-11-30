@@ -2,8 +2,57 @@ import os
 import sys
 import numpy as np
 import time
+from datetime import timedelta
 import threading
+import pyodbc
+import cx_Oracle as cx
 from queue import Queue
+
+
+def connect_to_db(conn_str, env):
+    db = None
+    for _ in range(50):  # 50 attempts
+        try:
+            if env == 'oracle':
+                db = cx.connect(conn_str)
+            else:
+                db = pyodbc.connect(conn_str, autocommit=True, timeout=0)
+            if db:
+                break
+        except Exception as e:
+            raise Exception(e)
+    if not db:
+        raise Exception('\nCant connect in 50 attempts. Exit 1\n')
+    print('\n[{0}] Connected to {1}\n'.format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), env))
+    return db
+
+
+def check_start(line):
+    block_starts = ['begin', 'declare', 'createpackage', 'createfunction', 'createtrigger', 'createprocedure',
+                    'createorreplacepackage', 'createorreplacefunction', 'createorreplacetrigger', 'createorreplaceprocedure']
+    return any(map(line.strip().replace(' ', '').startswith, block_starts))
+
+
+def clear_data(text):
+
+    text_lines = text.split('\n')
+    cl_data = []
+    is_block = 0
+
+    for line in text_lines:
+        if not line.strip('\n '):
+            continue
+        elif is_block == 0 and check_start(line):
+            is_block = 1
+            cl_data.append('/')
+            cl_data.append(line)
+        elif line.strip().startswith('/'):
+            is_block = 0
+            cl_data.append(line)
+        else:
+            cl_data.append(line)
+
+    return '\n'.join(cl_data)
 
 
 def pretty_print_result(output):
@@ -55,8 +104,10 @@ def exec_query(cur):
     timeout = time.time() + 30
 
     input_msgs = Queue()
+
     def read_input(msg_q):
-        while True: msg_q.put(sys.stdin.readline())
+        while True:
+            msg_q.put(sys.stdin.readline())
 
     input_t = threading.Thread(target=read_input, args=(input_msgs,))
     input_t.daemon = True
@@ -66,7 +117,6 @@ def exec_query(cur):
         try:
             '''messages like :
             >> load:100
-            >> exit:0
             '''
             if input_msgs.empty():
                 time.sleep(0.2)
@@ -102,8 +152,42 @@ def exec_explain(cur, env):
     cur.close()
 
 
-def exec_script(cur):
-    pass
+def exec_script(cur, query):
+    cl_data = clear_data(query)
+    cl_data = filter(None, map(lambda x: x.strip('\n ').replace('\r', ''), cl_data.split('/')))
+
+    # for z in cl_data:
+    #     print(z)
+    #     print('=====')
+
+    for i in cl_data:
+        if not check_start(i):
+            si = filter(None, i.split(';'))
+            for s in si:
+                print(s)
+                start = time.time()
+                cur.execute(s)
+                end = time.time()
+                print('\nElapsed {0} s'.format(str(timedelta(seconds=end - start))))
+        else:
+            print(i)
+            cur.callproc("dbms_output.enable")
+            start = time.time()
+            cur.execute(i)
+            textVar = cur.var(str)
+            statusVar = cur.var(int)
+            c = 0
+            while True:
+                cur.callproc("dbms_output.get_line", (textVar, statusVar))
+                if statusVar.getvalue() != 0:
+                    break
+                print(textVar.getvalue())
+                c += 1
+            end = time.time()
+            print('\nElapsed {0} s'.format(str(timedelta(seconds=end - start))))
+
+    print('\nFetched {0} rows'.format(1))
+    cur.close()
 
 
 def main():
@@ -112,24 +196,18 @@ def main():
     query = sys.argv[3]
     qtype = sys.argv[4]  # query , script, explain
 
-    exec_module = None
-    if env == 'oracle':
-        import oracle as exec_module
-    elif env == 'impala':
-        import impala as exec_module
-    else:
-        raise Exception('Wrong environment')
-
     try:
-        db = exec_module.connect_to_db(conn_str)
-        cur = exec_module.execute_query(db, query)
+        db = connect_to_db(conn_str, env)
+        cur = db.cursor()
 
         if qtype == 'query':
+            cur.execute(query)
             exec_query(cur)
         elif qtype == 'explain':
+            cur.execute(query)
             exec_explain(cur, env)
         elif qtype == 'script':
-            exec_script(cur)
+            exec_script(cur, query)
 
     except Exception as e:
         e_msg = str(e) + '\n'
