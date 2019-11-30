@@ -20,3 +20,5 @@ jcsql/.vscode/settings.json
 tst.py
 jcsql/.vscode/launch.json
 
+jcsql/.vscode/.ropeproject/objectdb
+jcsql/.vscode/.ropeproject/config.py

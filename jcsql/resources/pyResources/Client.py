@@ -8,7 +8,7 @@ import pyodbc
 import cx_Oracle as cx
 from queue import Queue
 
-ENDSTR = chr(9) # --> (\u0009)
+END_STR = chr(9) # --> (\u0009)
 
 
 def connect_to_db(conn_str, env):
@@ -73,7 +73,7 @@ def pretty_print_result(output):
             print('+' + ''.join(['-' * x + '--+' for x in max_col_length]))
 
     print('\nFetched {0} rows\n'.format(len(output) - 1))
-    print(ENDSTR)
+    print(END_STR)
 
 
 def fetch_data(cur, res, fetch_num=100, with_header=False):
@@ -150,7 +150,7 @@ def exec_explain(cur, env):
     res = cur.fetchall()
     for line in res:
         print(line[0])
-    print(ENDSTR)
+    print(END_STR)
 
     cur.close()
 
@@ -185,7 +185,7 @@ def exec_script(cur, query):
             end = time.time()
             print('\nElapsed {0} s'.format(str(timedelta(seconds=end - start))))
 
-    print(ENDSTR)
+    print(END_STR)
     cur.close()
 
 
@@ -211,7 +211,7 @@ def main():
     except Exception as e:
         e_msg = str(e) + '\n'
         print(e_msg)
-        print(ENDSTR)
+        print(END_STR)
         os._exit(1)
 
     db.close()
