@@ -112,7 +112,7 @@ class Executer {
         const obj = this;
         const promise = new Promise<string>(function (resolve) {
             setTimeout(function waitData(lData) {
-                if (lData.data.includes('Fetched') && lData.state === 'new') {
+                if (lData.data.includes('\u0009') && lData.state === 'new') {
                     resolve(lData.data);
                 } else {
                     setTimeout(waitData, 100, obj.data);

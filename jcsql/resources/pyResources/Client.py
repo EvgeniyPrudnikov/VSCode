@@ -8,6 +8,8 @@ import pyodbc
 import cx_Oracle as cx
 from queue import Queue
 
+ENDSTR = chr(9) # --> (\u0009)
+
 
 def connect_to_db(conn_str, env):
     db = None
@@ -71,6 +73,7 @@ def pretty_print_result(output):
             print('+' + ''.join(['-' * x + '--+' for x in max_col_length]))
 
     print('\nFetched {0} rows\n'.format(len(output) - 1))
+    print(ENDSTR)
 
 
 def fetch_data(cur, res, fetch_num=100, with_header=False):
@@ -147,18 +150,14 @@ def exec_explain(cur, env):
     res = cur.fetchall()
     for line in res:
         print(line[0])
-    print('\nFetched {0} rows'.format(len(res)))
+    print(ENDSTR)
 
     cur.close()
 
 
 def exec_script(cur, query):
     cl_data = clear_data(query)
-    cl_data = filter(None, map(lambda x: x.strip('\n ').replace('\r', ''), cl_data.split('/')))
-
-    # for z in cl_data:
-    #     print(z)
-    #     print('=====')
+    cl_data = list(filter(None, map(lambda x: x.replace('\r', '').strip('\n '), cl_data.split('/'))))
 
     for i in cl_data:
         if not check_start(i):
@@ -186,7 +185,7 @@ def exec_script(cur, query):
             end = time.time()
             print('\nElapsed {0} s'.format(str(timedelta(seconds=end - start))))
 
-    print('\nFetched {0} rows'.format(1))
+    print(ENDSTR)
     cur.close()
 
 
@@ -212,7 +211,7 @@ def main():
     except Exception as e:
         e_msg = str(e) + '\n'
         print(e_msg)
-        print('Fetched {0} rows'.format(len(e_msg.split('\n')) - 1))
+        print(ENDSTR)
         os._exit(1)
 
     db.close()
